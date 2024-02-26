@@ -6,4 +6,5 @@ services:
       context: .
     volumes:
       - .:/app
+    stop_signal: SIGKILL
     entrypoint: ["sh", "-c", "while true; do sleep 1; done"]
