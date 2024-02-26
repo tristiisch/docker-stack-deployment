@@ -1,6 +1,6 @@
 # Docker Deployment Action
 
-A [GitHub Action](https://github.com/marketplace/actions/docker-deployment) that supports docker-compose and Docker Swarm deployments. [Documentaion Page](https://wshihadeh.github.io/actions/Docker-Deployment/).
+A [GitHub Action](https://github.com/marketplace/actions/docker-swarm-deployment) that supports docker-compose and Docker Swarm deployments.
 
 
 ## Example
@@ -9,7 +9,7 @@ Below is a brief example on how the action can be used:
 
 ```yaml
 - name: Deploy to Docker swarm
-  uses: wshihadeh/docker-deployment-action@v1
+  uses: tristiisch/docker-swarm-deployment@v1
   with:
     remote_docker_host: user@myswarm.com
     ssh_private_key: ${{ secrets.DOCKER_SSH_PRIVATE_KEY }}
