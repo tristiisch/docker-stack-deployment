@@ -21,7 +21,7 @@ setup_ssh() {
 
 	if [ "$INPUT_DEBUG" = "true" ]; then
 		SERVER_PUBLIC_KEY=$(ssh-keyscan -t $SSH_KEY_TYPE $SSH_HOST 2>&1)
-		debug "Actual public key of ssh server $SSH_KEY_TYPE :\n$SERVER_PUBLIC_KEY"
+		debug "Public key of ssh server $SSH_KEY_TYPE : $SERVER_PUBLIC_KEY"
 	fi
 
 	info "Adding known hosts"
@@ -63,21 +63,21 @@ WHITE='\e[0;37m'
 RESET='\e[0m'
 
 error() {
-    echo -e "${RED}ERROR\t$1${RESET}"
+    printf "${RED}ERROR\t%s${RESET}\n" "$*"
     exit 1
 }
 
 warning() {
-    echo -e "${YELLOW}WARNING\t$1${RESET}"
+    printf "${YELLOW}WARNING\t%s${RESET}\n" "$*"
 }
 
 info() {
-    echo -e "${CYAN}INFO\t$1${RESET}"
+    printf "${CYAN}INFO\t%s${RESET}\n" "$*"
 }
 
 debug() {
-	if [ "$INPUT_DEBUG" != "true" ]; then
-		return
-	fi
-    echo -e "${MAGENTA}DEBUG\t$1${RESET}"
+    if [ "$INPUT_DEBUG" != "true" ]; then
+        return
+    fi
+    printf "${MAGENTA}DEBUG\t%s${RESET}\n" "$*"
 }

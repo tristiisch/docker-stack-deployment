@@ -1,4 +1,4 @@
-name: Docker Swarm Deployment
+name: Docker Stack Deployment
 author: Tristiisch <tristiisch@outlook.fr>
 description: A GitHub Action that supports docker-compose and Docker Swarm deployments
 inputs:
