@@ -37,7 +37,7 @@ execute_ssh(){
 		-o UserKnownHostsFile=$KNOWN_HOST_PATH \
 		-o StrictHostKeyChecking=$STRICT_HOST \
 		-p $INPUT_REMOTE_DOCKER_PORT \
-		"$INPUT_REMOTE_DOCKER_HOST" "$@"
+		"$INPUT_REMOTE_DOCKER_HOST" "$@" 2>&1
 }
 
 copy_ssh(){
@@ -48,7 +48,7 @@ copy_ssh(){
 		-o UserKnownHostsFile=$KNOWN_HOST_PATH \
 		-o StrictHostKeyChecking=$STRICT_HOST \
 		-P $INPUT_REMOTE_DOCKER_PORT \
-		$local_file "$INPUT_REMOTE_DOCKER_HOST:$remote_file"
+		$local_file "$INPUT_REMOTE_DOCKER_HOST:$remote_file" 2>&1
 }
 
 # Define color variables
@@ -63,7 +63,7 @@ WHITE='\e[0;37m'
 RESET='\e[0m'
 
 error() {
-    echo -e "${RED}ERROR\t$1${RESET}" >&2
+    echo -e "${RED}ERROR\t$1${RESET}"
     exit 1
 }
 
