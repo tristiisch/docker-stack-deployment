@@ -7,23 +7,19 @@ if [ -z "$INPUT_REMOTE_DOCKER_PORT" ]; then
 fi
 
 if [ -z "$INPUT_REMOTE_DOCKER_HOST" ]; then
-	echo "Input remote_docker_host is required!"
-	exit 1
+	error "Input remote_docker_host is required."
 fi
 
 if [ -z "$INPUT_SSH_PUBLIC_KEY" ]; then
-	echo "Input ssh_public_key is required!"
-	exit 1
+	error "Input ssh_public_key is required."
 fi
 
 if [ -z "$INPUT_SSH_PRIVATE_KEY" ]; then
-	echo "Input ssh_private_key is required!"
-	exit 1
+	error "Input ssh_private_key is required."
 fi
 
 if [ -z "$INPUT_ARGS" ]; then
-	echo "Input input_args is required!"
-	exit 1
+	error "Input input_args is required."
 fi
 
 if [ -z "$INPUT_DEPLOY_PATH" ]; then

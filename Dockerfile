@@ -1,4 +1,4 @@
-FROM alpine:3.19
+FROM docker:latest
 
 LABEL 'name'='Docker Swarm Deployment Action'
 LABEL 'maintainer'='Tristiisch <tristiisch@outlook.fr>'
