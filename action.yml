@@ -3,50 +3,53 @@ author: Tristiisch <tristiisch@outlook.fr>
 description: A GitHub Action that supports docker-compose and Docker Swarm deployments
 inputs:
   remote_docker_host:
-    description: Remote Docker host ie (user@host)
+    description: 'Remote Docker host (e.g., 127.0.0.1)'
     required: true
   remote_docker_port:
-    description: Remote Docker ssh port ie (22)
+    description: 'Remote Docker SSH port (default: 22)'
     required: false
     default: 22
+  remote_docker_username:
+    description: 'Remote Docker username (e.g., baptiste)'
+    required: true
   ssh_public_key:
-    description: Remote Docker SSH public key
+    description: 'Public key of the SSH server'
     required: true
   ssh_private_key:
-    description: SSH private key used to connect to the docker host
+    description: 'Private key of the SSH client'
     required: true
   args:
-    description: Deployment command args.
+    description: 'Command arguments for deployment'
     required: true
   deployment_mode:
-    description: Deployment mode either docker-swarm or docker-compose. Default is docker-compose.
+    description: 'Deployment mode: docker-swarm or docker-compose (default: docker-compose)'
     required: false
-    default: "docker-compose"
+    default: './docker-compose'
   copy_stack_file:
-    description: Copy stack file to remote server and deploy from the server. Default is false.
+    description: 'Copy stack file to remote server and deploy from the server (default: false)'
     required: false
   deploy_path:
-    description: The path where the stack files will be copied to. Default ~/docker-deployment.
+    description: 'Path where stack files will be copied (default: ~/docker-deployment)'
     required: false
-  stack_file_name:
-    description: Docker stack file used. Default is docker-compose.yaml
+  stack_file_path:
+    description: 'Path to Docker stack file (default: docker-compose.yaml)'
     required: false
   keep_files:
-    description: Number of the files to be kept on the server. Default is 3.
+    description: 'Number of files to keep on the server (default: 3)'
     required: false
     default: 3
   docker_prune:
-    description: A boolean input to trigger docker prune command. Default is false.
+    description: 'Trigger docker prune command (default: false)'
     required: false
     default: false
   pre_deployment_command_args:
-    description: "[docker-compose] Arguments for the pre-deployment command."
+    description: '[docker-compose] Arguments for the pre-deployment command'
     required: false
   pull_images_first:
-    description: Pull docker images before deploying
+    description: '[docker-compose] Pull Docker images before deploying'
     required: false
   debug:
-    description: Enable debug mode to include additional debugging messages
+    description: 'Enable debug mode to include additional debugging messages (default: true)'
     required: false
     default: true
 

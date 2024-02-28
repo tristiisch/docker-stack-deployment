@@ -10,15 +10,16 @@ Below is a concise example demonstrating the utilization of this action:
 - name: Deploy to Docker
   uses: tristiisch/docker-stack-deployment@v1
   with:
-    remote_docker_host: user@myswarm.com
+    remote_docker_host: 203.0.113.0
+    remote_docker_username: johndoe
     ssh_private_key: ${{ secrets.DOCKER_SSH_PRIVATE_KEY }}
     ssh_public_key: ${{ secrets.DOCKER_SSH_PUBLIC_KEY }}
     deployment_mode: docker-swarm
     copy_stack_file: true
-    deploy_path: /root/my-deployment
-    stack_file_name: docker-compose.yaml
+    deploy_path: /opt/docker/wonderful-stack
+    stack_file_path: ./docker-compose.production.yaml
     keep_files: 5
-    args: my_application
+    args: wonderful-stack
 ```
 
 ## Input Configurations
@@ -29,28 +30,46 @@ Below is a comprehensive list of all supported inputs. Certain inputs are sensit
 
 Specify arguments to pass to the deployment command, either `docker` or `docker-compose`. The action automatically generates the following commands for each case:
 - `docker stack deploy --compose-file $FILE --log-level debug --host $HOST`
-- `docker-compose -f $INPUT_STACK_FILE_NAME`
+- `docker-compose -f $INPUT_STACK_FILE_PATH`
 
 ### `remote_docker_host`
 
-Specify the Remote Docker host in the format `user@host`.
+Specify the Remote Docker host like `203.0.113.0`.
 
 ### `remote_docker_port`
 
 Specify the Remote Docker SSH port if it's not the default (22), e.g., (2222).
 
+### `remote_docker_username`
+
+Specify the Remote Docker username like `johndoe`.
+
 ### `ssh_public_key`
 
 Provide the SSH public key for the Remote Docker. Do not provide the content of `id_rsa.pub`. Instead, provide the content of `~/.ssh/known_hosts`, obtainable by connecting to the host once using your machine.
 
-Example:
+Examples:
 ```
-1.1.1.1 ecdsa-sha2-nistp256 AAAAE2VjZHNhLNTYAAAAIbmlzdHAyNCN5F3TLxUllpSRx8y+9C2uh+lWZDFmAsFMjcz2Zgq4d5F+oGicGaRk=
+ecdsa-sha2-nistp256 AAAAE2VjZHNhLNTYAAAAIbmlzdHAyNCN5F3TLxUllpSRx8y+9C2uh+lWZDFmAsFMjcz2Zgq4d5F+oGicGaRk=
+```
+or
+```
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5pKf6j0c6sCIoJxg2tO9Xj7UOCmX...
 ```
 
 ### `ssh_private_key`
 
-Provide the SSH private key used to connect to the Docker host. Ensure the SSH key is in PEM format (begins with -----BEGIN RSA PRIVATE KEY-----), or you may encounter an "invalid format" error. Convert it from OPENSSH format (beginning with -----BEGIN OPENSSH PRIVATE KEY-----) using `ssh-keygen -p -m PEM -f ~/.ssh/id_rsa`.
+Provide the SSH private key used to connect to the Docker host.
+
+Exemple:
+```
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAACFwAAAAdzc2gtcn
+...
+Cd1OwTxgE6cAAAAPcm9vdEBzd2FybS10ZXN0AQIDBA==
+-----END OPENSSH PRIVATE KEY-----
+```
+> If this doesn't work, you may want to try ensuring that the SSH key is in PEM format, identifiable by the header starting with -----BEGIN RSA PRIVATE KEY-----. Failure to do so might lead to encountering an 'invalid format' error. Convert it from the OPENSSH format, which begins with -----BEGIN OPENSSH PRIVATE KEY-----, by using the command `ssh-keygen -p -m PEM -f ~/.ssh/id_rsa`.
 
 ### `deployment_mode`
 
@@ -64,9 +83,9 @@ Toggle to copy the stack file to the remote server and deploy from there. Defaul
 
 Specify the path where the stack files will be copied. Default is ~/docker-deployment.
 
-### `stack_file_name`
+### `stack_file_path`
 
-Specify the Docker stack file to be used. Default is docker-compose.yaml.
+Specify the Docker stack path to be used. Default is ./docker-compose.yaml.
 
 ### `keep_files`
 

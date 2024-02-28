@@ -10,6 +10,10 @@ if [ -z "$INPUT_REMOTE_DOCKER_HOST" ]; then
 	error "Input remote_docker_host is required."
 fi
 
+if [ -z "$INPUT_REMOTE_DOCKER_USERNAME" ]; then
+	error "Input remote_docker_username is required."
+fi
+
 if [ -z "$INPUT_SSH_PUBLIC_KEY" ]; then
 	error "Input ssh_public_key is required."
 fi
@@ -26,8 +30,8 @@ if [ -z "$INPUT_DEPLOY_PATH" ]; then
 	INPUT_DEPLOY_PATH=~/docker-deployment
 fi
 
-if [ -z "$INPUT_STACK_FILE_NAME" ]; then
-	INPUT_STACK_FILE_NAME=docker-compose.yaml
+if [ -z "$INPUT_STACK_FILE_PATH" ]; then
+	INPUT_STACK_FILE_PATH=docker-compose.yaml
 fi
 
 if [ -z "$INPUT_KEEP_FILES" ]; then

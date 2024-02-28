@@ -2,7 +2,7 @@
 set -eu
 source /app/scripts/functions.sh
 
-STACK_FILE=${INPUT_STACK_FILE_NAME}
+STACK_FILE=${INPUT_STACK_FILE_PATH}
 DEPLOYMENT_COMMAND_OPTIONS=""
 
 
@@ -29,10 +29,10 @@ else
 	
 	info "Copy docker compose file"
 	FILE_NAME="docker-stack-$(date +%Y%m%d%s).yaml"
-	copy_ssh $INPUT_STACK_FILE_NAME "$INPUT_DEPLOY_PATH/stacks/$FILE_NAME"
+	copy_ssh $INPUT_STACK_FILE_PATH "$INPUT_DEPLOY_PATH/stacks/$FILE_NAME"
 
 	info "Creating symbolic link"
-	execute_ssh "ln -nfs $INPUT_DEPLOY_PATH/stacks/$FILE_NAME $INPUT_DEPLOY_PATH/$INPUT_STACK_FILE_NAME"
+	execute_ssh "ln -nfs $INPUT_DEPLOY_PATH/stacks/$FILE_NAME $INPUT_DEPLOY_PATH/$INPUT_STACK_FILE_PATH"
 
 	info "Removing outdated backup files"
 	execute_ssh "ls -t $INPUT_DEPLOY_PATH/stacks/docker-stack-* 2>/dev/null | tail -n +$INPUT_KEEP_FILES | xargs rm --  2>/dev/null || true"

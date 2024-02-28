@@ -5,9 +5,10 @@ KEY_NAME="docker_key"
 KEY_PATH="$HOME/.ssh/$KEY_NAME"
 STRICT_HOST="yes"
 KNOWN_HOST_PATH=$HOME/.ssh/known_hosts
+DOCKER_USER_HOST="$INPUT_REMOTE_DOCKER_USERNAME@$INPUT_REMOTE_DOCKER_HOST"
 
 setup_ssh() {
-	SSH_HOST=${INPUT_REMOTE_DOCKER_HOST#*@}
+	SSH_HOST=$INPUT_REMOTE_DOCKER_HOST
 	SSH_KEY_TYPE=$(echo $INPUT_SSH_PUBLIC_KEY | cut -d ' ' -f 1)
 
 	SSH_VERSION=$(ssh -V 2>&1)
@@ -37,7 +38,7 @@ execute_ssh(){
 		-o UserKnownHostsFile=$KNOWN_HOST_PATH \
 		-o StrictHostKeyChecking=$STRICT_HOST \
 		-p $INPUT_REMOTE_DOCKER_PORT \
-		"$INPUT_REMOTE_DOCKER_HOST" "$@" 2>&1
+		"$DOCKER_USER_HOST" "$@" 2>&1
 }
 
 copy_ssh(){
@@ -48,7 +49,7 @@ copy_ssh(){
 		-o UserKnownHostsFile=$KNOWN_HOST_PATH \
 		-o StrictHostKeyChecking=$STRICT_HOST \
 		-P $INPUT_REMOTE_DOCKER_PORT \
-		$local_file "$INPUT_REMOTE_DOCKER_HOST:$remote_file" 2>&1
+		$local_file "$DOCKER_USER_HOST:$remote_file" 2>&1
 }
 
 # Define color variables
