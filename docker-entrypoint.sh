@@ -41,6 +41,7 @@ else
 fi
 
 setup_ssh
+setup_remote_docker
 
 case $INPUT_DEPLOYMENT_MODE in
 

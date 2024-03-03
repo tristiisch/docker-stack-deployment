@@ -7,7 +7,6 @@ inputs:
     required: true
   remote_docker_port:
     description: 'Remote Docker SSH port (default: 22)'
-    required: false
     default: 22
   remote_docker_username:
     description: 'Remote Docker username (e.g., baptiste)'
@@ -23,34 +22,25 @@ inputs:
     required: true
   deployment_mode:
     description: 'Deployment mode: docker-swarm or docker-compose (default: docker-compose)'
-    required: false
     default: './docker-compose'
   copy_stack_file:
     description: 'Copy stack file to remote server and deploy from the server (default: false)'
-    required: false
   deploy_path:
     description: 'Path where stack files will be copied (default: ~/docker-deployment)'
-    required: false
   stack_file_path:
     description: 'Path to Docker stack file (default: docker-compose.yaml)'
-    required: false
   keep_files:
     description: 'Number of files to keep on the server (default: 3)'
-    required: false
     default: 3
   docker_prune:
     description: 'Trigger docker prune command (default: false)'
-    required: false
     default: false
   pre_deployment_command_args:
     description: '[docker-compose] Arguments for the pre-deployment command'
-    required: false
   pull_images_first:
     description: '[docker-compose] Pull Docker images before deploying'
-    required: false
   debug:
     description: 'Enable debug mode to include additional debugging messages (default: true)'
-    required: false
     default: true
 
 runs:

@@ -10,7 +10,7 @@ LABEL 'com.github.actions.color'='green'
 
 RUN apk --no-cache add openssh-client docker-compose
 
-WORKDIR app
+WORKDIR /app
 
 COPY ./docker-entrypoint.sh ./docker-entrypoint.sh
 COPY ./scripts ./scripts

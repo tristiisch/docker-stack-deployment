@@ -24,3 +24,5 @@ exec: check-running
 
 test: check-running
 	@docker compose exec -it $(ACTION_SERVICE) $(TESTING_CMD)
+
+dev: start-f exec

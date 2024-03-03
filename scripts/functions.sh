@@ -6,10 +6,16 @@ KEY_PATH="$HOME/.ssh/$KEY_NAME"
 STRICT_HOST="yes"
 KNOWN_HOST_PATH=$HOME/.ssh/known_hosts
 DOCKER_USER_HOST="$INPUT_REMOTE_DOCKER_USERNAME@$INPUT_REMOTE_DOCKER_HOST"
+DOCKER_CONTEXT_NAME="docker-remote"
 
 setup_ssh() {
+	
+	if [ -e "$KEY_PATH" ]; then
+		debug "SSH key setup already completed"
+		return 0
+	fi
 	SSH_HOST=$INPUT_REMOTE_DOCKER_HOST
-	SSH_KEY_TYPE=$(echo $INPUT_SSH_PUBLIC_KEY | cut -d ' ' -f 1)
+	SSH_KEY_TYPE=$(echo "$INPUT_SSH_PUBLIC_KEY" | cut -d ' ' -f 1)
 
 	SSH_VERSION=$(ssh -V 2>&1)
 	debug "SSH client version : $SSH_VERSION"
@@ -17,39 +23,52 @@ setup_ssh() {
 	info "Registering SSH key"
 	mkdir -p "$HOME/.ssh"
 	chmod 700 "$HOME/.ssh"
-	printf '%s\n' "$INPUT_SSH_PRIVATE_KEY" > $KEY_PATH
-	chmod 600 $KEY_PATH
+	printf '%s\n' "$INPUT_SSH_PRIVATE_KEY" > "$KEY_PATH"
+	chmod 600 "$KEY_PATH"
 
 	if [ "$INPUT_DEBUG" = "true" ]; then
-		SERVER_PUBLIC_KEY=$(ssh-keyscan -t $SSH_KEY_TYPE $SSH_HOST 2>&1)
+		SERVER_PUBLIC_KEY=$(ssh-keyscan -t "$SSH_KEY_TYPE" "$SSH_HOST" 2>&1)
 		debug "Public key of ssh server $SSH_KEY_TYPE : $SERVER_PUBLIC_KEY"
 	fi
 
 	info "Adding known hosts"
-	printf '%s %s\n' "$SSH_HOST" "$INPUT_SSH_PUBLIC_KEY" > $KNOWN_HOST_PATH
+	printf '%s %s\n' "$SSH_HOST" "$INPUT_SSH_PUBLIC_KEY" > "$KNOWN_HOST_PATH"
 
-	KNOWN_HOST=$(cat $KNOWN_HOST_PATH)
+	KNOWN_HOST=$(cat "$KNOWN_HOST_PATH")
 	debug "$KNOWN_HOST"
+
+	cat <<EOF >> "$HOME/.ssh/config"
+	IdentityFile ~/.ssh/$KEY_NAME
+	UserKnownHostsFile $KNOWN_HOST_PATH
+	StrictHostKeyChecking $STRICT_HOST
+	ControlMaster auto
+	ControlPath ~/.ssh/control-%C
+	ControlPersist yes
+EOF
+
+}
+
+setup_remote_docker() {
+	if ! docker context inspect "$DOCKER_CONTEXT_NAME" >/dev/null 2>&1; then
+		docker context create "$DOCKER_CONTEXT_NAME" --docker "host=ssh://$DOCKER_USER_HOST:$INPUT_REMOTE_DOCKER_PORT"
+	fi
+
+	current_context=$(docker context show)
+	if [ "$current_context" != "$DOCKER_CONTEXT_NAME" ]; then
+		docker context use $DOCKER_CONTEXT_NAME
+	fi
 }
 
 execute_ssh(){
-	debug "Execute Over SSH : $ $@"
-	ssh -i $KEY_PATH \
-		-o UserKnownHostsFile=$KNOWN_HOST_PATH \
-		-o StrictHostKeyChecking=$STRICT_HOST \
-		-p $INPUT_REMOTE_DOCKER_PORT \
-		"$DOCKER_USER_HOST" "$@" 2>&1
+	debug "Execute Over SSH : $ $*"
+	ssh -p "$INPUT_REMOTE_DOCKER_PORT" "$DOCKER_USER_HOST" "$@" 2>&1
 }
 
 copy_ssh(){
-	local local_file="$1"
-	local remote_file="$2"
+	local_file="$1"
+	remote_file="$2"
 	debug "Copy Over SSH : $local_file -> $remote_file"
-	scp -i $KEY_PATH \
-		-o UserKnownHostsFile=$KNOWN_HOST_PATH \
-		-o StrictHostKeyChecking=$STRICT_HOST \
-		-P $INPUT_REMOTE_DOCKER_PORT \
-		$local_file "$DOCKER_USER_HOST:$remote_file" 2>&1
+	scp -P "$INPUT_REMOTE_DOCKER_PORT" "$local_file" "$DOCKER_USER_HOST:$remote_file" 2>&1
 }
 
 # Define color variables
