@@ -2,9 +2,10 @@
 set -eu
 
 KEY_NAME="docker_key"
-KEY_PATH="$HOME/.ssh/$KEY_NAME"
+SSH_FOLDER="$HOME/.ssh"
+KEY_PATH="$SSH_FOLDER/$KEY_NAME"
 STRICT_HOST="yes"
-KNOWN_HOST_PATH=$HOME/.ssh/known_hosts
+KNOWN_HOST_PATH=$SSH_FOLDER/known_hosts
 DOCKER_USER_HOST="$INPUT_REMOTE_DOCKER_USERNAME@$INPUT_REMOTE_DOCKER_HOST"
 DOCKER_CONTEXT_NAME="docker-remote"
 
@@ -21,8 +22,8 @@ setup_ssh() {
 	debug "SSH client version : $SSH_VERSION"
 
 	info "Registering SSH key"
-	mkdir -p "$HOME/.ssh"
-	chmod 700 "$HOME/.ssh"
+	mkdir -p "$SSH_FOLDER"
+	chmod 700 "$SSH_FOLDER"
 	printf '%s\n' "$INPUT_SSH_PRIVATE_KEY" > "$KEY_PATH"
 	chmod 600 "$KEY_PATH"
 
@@ -37,12 +38,12 @@ setup_ssh() {
 	KNOWN_HOST=$(cat "$KNOWN_HOST_PATH")
 	debug "$KNOWN_HOST"
 
-	cat <<EOF >> "$HOME/.ssh/config"
-	IdentityFile ~/.ssh/$KEY_NAME
+	cat <<EOF >> "/etc/ssh/ssh_config.d/docker_stack_deployement.conf"
+	IdentityFile $SSH_FOLDER/$KEY_NAME
 	UserKnownHostsFile $KNOWN_HOST_PATH
 	StrictHostKeyChecking $STRICT_HOST
 	ControlMaster auto
-	ControlPath ~/.ssh/control-%C
+	ControlPath $SSH_FOLDER/control-%C
 	ControlPersist yes
 EOF
 
@@ -61,14 +62,14 @@ setup_remote_docker() {
 
 execute_ssh(){
 	debug "Execute Over SSH : $ $*"
-	ssh -p "$INPUT_REMOTE_DOCKER_PORT" "$DOCKER_USER_HOST" "$@" 2>&1
+	ssh -v -p "$INPUT_REMOTE_DOCKER_PORT" "$DOCKER_USER_HOST" "$@" 2>&1
 }
 
 copy_ssh(){
 	local_file="$1"
 	remote_file="$2"
 	debug "Copy Over SSH : $local_file -> $remote_file"
-	scp -P "$INPUT_REMOTE_DOCKER_PORT" "$local_file" "$DOCKER_USER_HOST:$remote_file" 2>&1
+	scp -v -P "$INPUT_REMOTE_DOCKER_PORT" "$local_file" "$DOCKER_USER_HOST:$remote_file" 2>&1
 }
 
 # Define color variables
