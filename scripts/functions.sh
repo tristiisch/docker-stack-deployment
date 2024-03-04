@@ -6,11 +6,9 @@ SSH_FOLDER="$HOME/.ssh"
 KEY_PATH="$SSH_FOLDER/$KEY_NAME"
 STRICT_HOST="yes"
 KNOWN_HOST_PATH=$SSH_FOLDER/known_hosts
-DOCKER_USER_HOST="$INPUT_REMOTE_DOCKER_USERNAME@$INPUT_REMOTE_DOCKER_HOST"
 DOCKER_CONTEXT_NAME="docker-remote"
 
 setup_ssh() {
-	
 	if [ -e "$KEY_PATH" ]; then
 		debug "SSH key setup already completed"
 		return 0

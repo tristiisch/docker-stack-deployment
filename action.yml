@@ -39,6 +39,8 @@ inputs:
     description: '[docker-compose] Arguments for the pre-deployment command'
   pull_images_first:
     description: '[docker-compose] Pull Docker images before deploying'
+  secrets:
+    description: 'Update Docker Secret using rotation during Stack Update. Format is stack_name service_name secret_name key1 value1 key2 value2 ...'
   debug:
     description: 'Enable debug mode to include additional debugging messages (default: true)'
     default: false
