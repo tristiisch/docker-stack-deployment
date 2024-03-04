@@ -18,4 +18,6 @@ COPY ./scripts ./scripts
 RUN chmod 755 docker-entrypoint.sh
 RUN chmod -R 755 ./scripts
 
+WORKDIR /root
+
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

@@ -1,6 +1,10 @@
 #!/bin/sh
 set -eu
-. scripts/functions.sh
+
+WORKDIR=$(dirname "$(readlink -f "$0")")
+export WORKDIR
+
+. $WORKDIR/scripts/functions.sh
 
 if [ -z "$INPUT_REMOTE_DOCKER_PORT" ]; then
 	INPUT_REMOTE_DOCKER_PORT=22
@@ -80,19 +84,19 @@ POST_SCRIPTS_FOLDER=""
 if [ -n "${INPUT_SECRETS+set}" ]; then
 	POST_SCRIPTS_FOLDER="/opt/scripts/post"
 	export POST_SCRIPTS_FOLDER
-	./scripts/docker_secrets.sh "$INPUT_STACK_FILE_PATH" $INPUT_SECRETS
+	$WORKDIR/scripts/docker_secrets.sh "$INPUT_STACK_FILE_PATH" $INPUT_SECRETS
 fi
 
 case $INPUT_DEPLOYMENT_MODE in
 
 # Deploy to docker swarm
   docker-swarm)
-	./scripts/docker_swarm.sh
+	$WORKDIR/scripts/docker_swarm.sh
   ;;
 
 # Deploy to docker compose
   *)
-	./scripts/docker_compose.sh
+	$WORKDIR/scripts/docker_compose.sh
   ;;
 esac
 

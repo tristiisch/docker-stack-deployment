@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-source /app/scripts/functions.sh
+. $WORKDIR/scripts/functions.sh
 
 STACK_FINAL_PATH="$INPUT_STACK_FILE_PATH"
 DEPLOYMENT_COMMAND_OPTIONS=""

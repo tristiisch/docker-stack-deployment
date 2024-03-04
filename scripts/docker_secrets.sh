@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-. scripts/functions.sh
+. $WORKDIR/scripts/functions.sh
 
 get_service_secrets() {
     service_name=$1
