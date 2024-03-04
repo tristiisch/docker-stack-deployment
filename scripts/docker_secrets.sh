@@ -128,14 +128,16 @@ debug "Result: $old_service_sercrets"
 
 info "Identifying secrets for removal"
 secrets_obsolete=$(get_secret_obsolete "$old_service_sercrets" "$secret_label_hash_name" "$dotenv_secret_hash")
-debug "Result: $secrets_obsolete"
-
-if is_secret_exists "$old_service_sercrets" "$secret_label_hash_name" && [ "$secrets_obsolete" = "" ]; then
-	echo "Secret rotation not needed"
-	exit 0
+if [ "$secrets_obsolete" != "" ]; then
+	info "Secrets to remove: $secrets_obsolete"
 fi
 
-info "Generating a new secret"
+if is_secret_exists "$old_service_sercrets" "$secret_label_hash_name" && [ "$secrets_obsolete" = "" ]; then
+	info "Secret rotation not needed"
+	return
+fi
+
+info "Generate new secret: $secret_name_full"
 printf '%b' "$dotenv_secret" | docker secret create "$secret_name_full" -l "$secret_label_hash_name=$(calculate_hash \"$dotenv_secret\")" -
 
 info "Integrating the new secret into the docker-compose file"
