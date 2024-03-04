@@ -41,7 +41,7 @@ inputs:
     description: '[docker-compose] Pull Docker images before deploying'
   debug:
     description: 'Enable debug mode to include additional debugging messages (default: true)'
-    default: true
+    default: false
 
 runs:
   using: docker

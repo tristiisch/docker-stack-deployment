@@ -27,7 +27,7 @@ setup_ssh() {
 	printf '%s\n' "$INPUT_SSH_PRIVATE_KEY" > "$KEY_PATH"
 	chmod 600 "$KEY_PATH"
 
-	if [ "$INPUT_DEBUG" = "true" ]; then
+	if is_debug; then
 		SERVER_PUBLIC_KEY=$(ssh-keyscan -t "$SSH_KEY_TYPE" "$SSH_HOST" 2>&1)
 		debug "Public key of ssh server $SSH_KEY_TYPE : $SERVER_PUBLIC_KEY"
 	fi
@@ -61,15 +61,30 @@ setup_remote_docker() {
 }
 
 execute_ssh(){
+	verbose_arg=""
+	if is_debug; then
+		verbose_arg="-v"
+	fi
 	debug "Execute Over SSH : $ $*"
-	ssh -v -p "$INPUT_REMOTE_DOCKER_PORT" "$DOCKER_USER_HOST" "$@" 2>&1
+	ssh $verbose_arg -p "$INPUT_REMOTE_DOCKER_PORT" "$DOCKER_USER_HOST" "$@" 2>&1
 }
 
 copy_ssh(){
+	verbose_arg=""
+	if is_debug; then
+		verbose_arg="-v"
+	fi
 	local_file="$1"
 	remote_file="$2"
 	debug "Copy Over SSH : $local_file -> $remote_file"
-	scp -v -P "$INPUT_REMOTE_DOCKER_PORT" "$local_file" "$DOCKER_USER_HOST:$remote_file" 2>&1
+	scp $verbose_arg -P "$INPUT_REMOTE_DOCKER_PORT" "$local_file" "$DOCKER_USER_HOST:$remote_file" 2>&1
+}
+
+is_debug() {
+    if { [ -z "${INPUT_DEBUG+set}" ] || [ "$INPUT_DEBUG" != "true" ]; } && { [ -z "${RUNNER_DEBUG+set}" ] || [ "$RUNNER_DEBUG" != "1" ]; }; then
+        return 1
+    fi
+	return 0
 }
 
 # Define color variables
@@ -97,7 +112,7 @@ info() {
 }
 
 debug() {
-    if [ "$INPUT_DEBUG" != "true" ]; then
+    if ! is_debug; then
         return
     fi
     printf "${MAGENTA}DEBUG\t%s${RESET}\n" "$*"

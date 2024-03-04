@@ -14,7 +14,7 @@ fi
 
 DEPLOYMENT_COMMAND="docker-compose$DEPLOYMENT_COMMAND_OPTIONS -f $STACK_FILE"
 
-if ! [ -z "$INPUT_DOCKER_PRUNE" ] && [ "$INPUT_DOCKER_PRUNE" = "true" ] ; then
+if [ -n "$INPUT_DOCKER_PRUNE" ] && [ "$INPUT_DOCKER_PRUNE" = "true" ] ; then
 	info "Cleaning up Docker resources with pruning"
 	yes | docker --log-level debug system prune -a 2>&1
 fi
