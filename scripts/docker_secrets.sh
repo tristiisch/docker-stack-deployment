@@ -101,7 +101,7 @@ if [ $num_args -eq 0 ] || [ $((num_args % 2)) -ne 0 ]; then
 	exit 1
 fi
 
-info "Read secrets key and values"
+info "Retrieving secret keys and values"
 # Format humain input
 shift $secret_start_after
 while [ $# -gt 0 ]; do
@@ -114,19 +114,19 @@ done
 # Secret in format
 # KEY1=value1
 # KEY2=value2
-info "Format secrets key and values"
+info "Formatting secret keys and values"
 dotenv_secret=$(format_secret_input "$secret_values")
 
 # Hash indicates when to update the secret
-info "Caculate hash of secrets"
+info "Calculating hash for secrets"
 dotenv_secret_hash=$(calculate_hash "$dotenv_secret")
 debug "Result: $dotenv_secret_hash"
 
-info "Get current secret of service $service_fullname"
+info "Fetching the current secrets for service $service_fullname"
 old_service_sercrets=$(get_service_secrets "$service_fullname")
 debug "Result: $old_service_sercrets"
 
-info "Get secrets to remove"
+info "Identifying secrets for removal"
 secrets_obsolete=$(get_secret_obsolete "$old_service_sercrets" "$secret_label_hash_name" "$dotenv_secret_hash")
 debug "Result: $secrets_obsolete"
 
@@ -135,16 +135,16 @@ if is_secret_exists "$old_service_sercrets" "$secret_label_hash_name" && [ "$sec
 	exit 0
 fi
 
-info "Create a new secret"
+info "Generating a new secret"
 printf '%b' "$dotenv_secret" | docker secret create "$secret_name_full" -l "$secret_label_hash_name=$(calculate_hash \"$dotenv_secret\")" -
 
-info "Add secret to docker-compose file"
+info "Integrating the new secret into the docker-compose file"
 yq --inplace ".secrets.$secret_name_full.external = true" "$docker_compose_file_path"
 
-info "Add secret to service $service_name in docker-compose file"
+info "Updating the $service_name service within the docker-compose file with the new secret"
 yq --inplace ".services.$service_name.secrets += [\"$secret_name_full\"]" "$docker_compose_file_path"
 
-info "Add post-command to delete previous secrets"
+info "Implementing post-command to remove previous secrets"
 mkdir -p "$POST_SCRIPTS_FOLDER"
 post_script_path="$POST_SCRIPTS_FOLDER\docker_secret_rm.sh"
 touch "$post_script_path"
@@ -154,4 +154,4 @@ for obsolete_secret in $secrets_obsolete; do
 	echo "docker secret remove \"$obsolete_secret\"" >> "$post_script_path"
 done
 
-info "Docker secret rotation done"
+info "Completion of Docker secret rotation"
