@@ -43,7 +43,7 @@ is_secret_exists() {
 	return 1
 }
 
-get_secret_obsolete() {
+get_secrets_obsolete() {
 	old_service_sercrets="$1"
 	secret_label_hash_name="$2"
 	dotenv_secret_hash="$3"
@@ -57,6 +57,22 @@ get_secret_obsolete() {
 		fi
 	done
 	echo "$secret_obsolete"
+}
+
+get_secrets_to_preserve() {
+	old_service_sercrets="$1"
+	secret_label_hash_name="$2"
+	dotenv_secret_hash="$3"
+	secret_to_preserve=""
+	new_line=$(printf '\n')
+
+	for secret in $old_service_sercrets; do
+		old_hash=$(docker secret inspect "$secret" --format="{{index .Spec.Labels \"$secret_label_hash_name\"}}")
+		if [ -n "$old_hash" ] && printf "%s" "$old_hash" | grep -q "$new_line" && [ "$old_hash" = "$dotenv_secret_hash" ]; then
+			secret_to_preserve="$secret_to_preserve$secret "
+		fi
+	done
+	echo "$secret_to_preserve"
 }
 
 if ! command -v yq >/dev/null 2>&1; then
@@ -127,10 +143,20 @@ old_service_sercrets=$(get_service_secrets "$service_fullname")
 debug "Result: $old_service_sercrets"
 
 info "Identifying secrets for removal"
-secrets_obsolete=$(get_secret_obsolete "$old_service_sercrets" "$secret_label_hash_name" "$dotenv_secret_hash")
+secrets_obsolete=$(get_secrets_obsolete "$old_service_sercrets" "$secret_label_hash_name" "$dotenv_secret_hash")
 if [ "$secrets_obsolete" != "" ]; then
 	info "Secrets to remove: $secrets_obsolete"
 fi
+
+info "Identifying secrets to preserve"
+secrets_preserves=$(get_secrets_to_preserve "$old_service_sercrets" "$secret_label_hash_name" "$dotenv_secret_hash")
+for secret_preserve in $secrets_preserves; do
+	info "Preserve the old secret \"$secret_preserve\" into the docker-compose file"
+	yq --inplace ".secrets.$secret_preserve.external = true" "$docker_compose_file_path"
+
+	info "Updating the $service_name service within the docker-compose file with the old secret"
+	yq --inplace ".services.$service_name.secrets += [\"$secret_preserve\"]" "$docker_compose_file_path"
+done
 
 if is_secret_exists "$old_service_sercrets" "$secret_label_hash_name" && [ "$secrets_obsolete" = "" ]; then
 	info "Secret rotation not needed"
@@ -138,9 +164,9 @@ if is_secret_exists "$old_service_sercrets" "$secret_label_hash_name" && [ "$sec
 fi
 
 info "Generate new secret: $secret_name_full"
-printf '%b' "$dotenv_secret" | docker secret create "$secret_name_full" -l "$secret_label_hash_name=$(calculate_hash \"$dotenv_secret\")" -
+printf '%b' "$dotenv_secret" | docker secret create "$secret_name_full" -l "$secret_label_hash_name=$dotenv_secret_hash" -
 
-info "Integrating the new secret into the docker-compose file"
+info "Integrating the new secret \"$secret_name_full\" into the docker-compose file"
 yq --inplace ".secrets.$secret_name_full.external = true" "$docker_compose_file_path"
 
 info "Updating the $service_name service within the docker-compose file with the new secret"
