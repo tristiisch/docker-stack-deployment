@@ -101,7 +101,7 @@ case $INPUT_DEPLOYMENT_MODE in
 esac
 
 # Execute post commands if any
-if [ -n "$POST_SCRIPTS_FOLDER" ]; then
+if [ -n "$POST_SCRIPTS_FOLDER" ] && [ -d "$POST_SCRIPTS_FOLDER" ]; then
 	find "$POST_SCRIPTS_FOLDER" -type f -executable -exec sh {} \;
 fi
 
