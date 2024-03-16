@@ -16,21 +16,18 @@ Below is a concise example demonstrating the utilization of this action:
     ssh_public_key: ${{ secrets.DOCKER_SSH_PUBLIC_KEY }}
     deployment_mode: docker-swarm
     copy_stack_file: true
-    deploy_path: /opt/docker/wonderful-stack
+    deploy_path: /opt/docker/stack-name
     stack_file_path: ./docker-compose.production.yaml
     keep_files: 5
-    args: wonderful-stack
+	docker_remove_orphans: true
+    stack_name: stack-name
+    args: ""
+	secrets: compose-service-name secret-prefix VAR_KEY_1 var_value_1 VAR_KEY_2 var_value_2
 ```
 
 ## Input Configurations
 
 Below is a comprehensive list of all supported inputs. Certain inputs are sensitive and should be stored as secrets.
-
-### `args`
-
-Specify arguments to pass to the deployment command, either `docker` or `docker-compose`. The action automatically generates the following commands for each case:
-- `docker stack deploy --compose-file $FILE --log-level debug --host $HOST`
-- `docker-compose -f $INPUT_STACK_FILE_PATH`
 
 ### `remote_docker_host`
 
@@ -97,15 +94,25 @@ A boolean input to trigger the docker prune command.
 
 ### `pre_deployment_command_args`
 
-Specify the arguments for the pre-deployment command. Applicable only for docker-compose.
+Specify the arguments for the pre-deployment command. Applicable only for Docker Compose.
 
 ### `pull_images_first`
 
-Toggle to pull Docker images before deploying. Applicable only for docker-compose.
+Toggle to pull Docker images before deploying. Applicable only for Docker Compose.
+
+### `stack_name`
+
+Specify the name of the stack. This is only applicable for Docker Swarm.
+
+### `args`
+
+Specify arguments to pass to the deployment command, either `docker` or `docker-compose`. The action automatically generates the following commands for each case:
+- `docker stack deploy --compose-file $STACK_FILE_PATH $STACK_NAME $ARGS`
+- `docker compose -f $STACK_FILE_PATH $ARGS`
 
 ### `debug`
 
-Enable verbose messages for debugging purposes.
+Toggle verbose messaging for debugging purposes. This feature is automatically set to true when initiating the job in GitHub debug mode.
 
 ## License
 

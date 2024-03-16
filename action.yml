@@ -17,9 +17,6 @@ inputs:
   ssh_private_key:
     description: 'Private key of the SSH client'
     required: true
-  args:
-    description: 'Command arguments for deployment'
-    required: true
   deployment_mode:
     description: 'Deployment mode: docker-swarm or docker-compose (default: docker-compose)'
     default: './docker-compose'
@@ -35,12 +32,19 @@ inputs:
   docker_prune:
     description: 'Trigger docker prune command (default: false)'
     default: false
+  docker_remove_orphans:
+    description: 'Remove containers for services not defined in the Compose file (default: true)'
+    default: true
   pre_deployment_command_args:
-    description: '[docker-compose] Arguments for the pre-deployment command'
+    description: '[Docker Compose] Arguments for the pre-deployment command'
   pull_images_first:
-    description: '[docker-compose] Pull Docker images before deploying'
+    description: '[Docker Compose] Pull Docker images before deploying'
+  stack_name:
+    description: '[Docker Swarm] Specify the name of your Docker Swarm stack.'
   secrets:
-    description: 'Update Docker Secret using rotation during Stack Update. Format is stack_name service_name secret_name key1 value1 key2 value2 ...'
+    description: 'Update Docker Secret using rotation during Stack Update. Format is service_name secret_name key1 value1 key2 value2 ...'
+  args:
+    description: 'Command arguments for deployment'
   debug:
     description: 'Enable debug mode to include additional debugging messages (default: true)'
     default: false

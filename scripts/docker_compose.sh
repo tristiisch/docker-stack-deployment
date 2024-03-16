@@ -3,20 +3,21 @@ set -eu
 . $WORKDIR/scripts/functions.sh
 
 STACK_FILE=${INPUT_STACK_FILE_PATH}
-DEPLOYMENT_COMMAND_OPTIONS=""
-
+DOCKER_OPTIONS=" --log-level debug"
 
 if [ "$INPUT_COPY_STACK_FILE" = "true" ]; then
 	STACK_FILE="$INPUT_DEPLOY_PATH/$STACK_FILE"
-else
-	DEPLOYMENT_COMMAND_OPTIONS=" --log-level debug"
 fi
 
-DEPLOYMENT_COMMAND="docker-compose$DEPLOYMENT_COMMAND_OPTIONS -f $STACK_FILE"
+DEPLOYMENT_COMMAND="docker-compose$DOCKER_OPTIONS -f $STACK_FILE"
+
+if [ -n "$INPUT_DOCKER_REMOVE_ORPHANS" ] && [ "$INPUT_DOCKER_REMOVE_ORPHANS" = "true" ] ; then
+	DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND --remove-orphans"
+fi
 
 if [ -n "$INPUT_DOCKER_PRUNE" ] && [ "$INPUT_DOCKER_PRUNE" = "true" ] ; then
 	info "Cleaning up Docker resources with pruning"
-	yes | docker --log-level debug system prune -a 2>&1
+	yes | docker "$DOCKER_OPTIONS" system prune -a 2>&1
 fi
 
 if [ -z "$INPUT_COPY_STACK_FILE" ] && [ "$INPUT_COPY_STACK_FILE" = "true" ] ; then

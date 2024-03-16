@@ -26,10 +26,6 @@ if [ -z "$INPUT_SSH_PRIVATE_KEY" ]; then
 	error "Input ssh_private_key is required."
 fi
 
-if [ -z "$INPUT_ARGS" ]; then
-	error "Input input_args is required."
-fi
-
 if [ -z "$INPUT_KEEP_FILES" ]; then
 	INPUT_KEEP_FILES=4
 else
@@ -79,24 +75,28 @@ setup_ssh
 # Create docker remote config
 setup_remote_docker
 
-# Rotate secret if any
-POST_SCRIPTS_FOLDER=""
-if [ -n "${INPUT_SECRETS+set}" ]; then
-	POST_SCRIPTS_FOLDER="/opt/scripts/post"
-	export POST_SCRIPTS_FOLDER
-	$WORKDIR/scripts/docker_secrets.sh "$INPUT_STACK_FILE_PATH" $INPUT_SECRETS
-fi
-
 case $INPUT_DEPLOYMENT_MODE in
 
 # Deploy to docker swarm
   docker-swarm)
-	$WORKDIR/scripts/docker_swarm.sh
+	if [ -z "$INPUT_STACK_NAME" ]; then
+		error "Input input_stack_name is required."
+	fi
+
+	# Rotate secret if any
+	POST_SCRIPTS_FOLDER=""
+	if [ -n "${INPUT_SECRETS+set}" ]; then
+		POST_SCRIPTS_FOLDER="/opt/scripts/post"
+		export POST_SCRIPTS_FOLDER
+		"$WORKDIR/scripts/docker_secrets.sh" "$INPUT_STACK_FILE_PATH" "$INPUT_STACK_NAME" $INPUT_SECRETS
+	fi
+
+	"$WORKDIR/scripts/docker_swarm.sh"
   ;;
 
 # Deploy to docker compose
   *)
-	$WORKDIR/scripts/docker_compose.sh
+	"$WORKDIR/scripts/docker_compose.sh"
   ;;
 esac
 
