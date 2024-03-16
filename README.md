@@ -8,7 +8,7 @@ Below is a concise example demonstrating the utilization of this action:
 
 ```yaml
 - name: Deploy to Docker
-  uses: tristiisch/docker-stack-deployment@v1
+  uses: tristiisch/docker-stack-deployment@v2
   with:
     remote_docker_host: 203.0.113.0
     remote_docker_username: johndoe
