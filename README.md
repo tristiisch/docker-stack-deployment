@@ -19,10 +19,10 @@ Below is a concise example demonstrating the utilization of this action:
     deploy_path: /opt/docker/stack-name
     stack_file_path: ./docker-compose.production.yaml
     keep_files: 5
-	docker_remove_orphans: true
+    docker_remove_orphans: true
     stack_name: stack-name
     args: ""
-	secrets: compose-service-name secret-prefix VAR_KEY_1 var_value_1 VAR_KEY_2 var_value_2
+    secrets: compose-service-name secret-prefix VAR_KEY_1 var_value_1 VAR_KEY_2 var_value_2
 ```
 
 ## Input Configurations
