@@ -20,11 +20,7 @@ if [ -n "$INPUT_DOCKER_PRUNE" ] && [ "$INPUT_DOCKER_PRUNE" = "true" ] ; then
 	yes | docker "$DOCKER_OPTIONS" system prune -a 2>&1
 fi
 
-if [ -z "$INPUT_COPY_STACK_FILE" ] && [ "$INPUT_COPY_STACK_FILE" = "true" ] ; then
-	info "Executing command on $INPUT_REMOTE_DOCKER_HOST"
-	info "$ $DEPLOYMENT_COMMAND $INPUT_ARGS"
-	$DEPLOYMENT_COMMAND "$INPUT_ARGS" 2>&1
-else
+if [ "$INPUT_COPY_STACK_FILE" = "true" ] ; then
 	info "Create remote folder for docker compose file"
 	execute_ssh "mkdir -p $INPUT_DEPLOY_PATH/stacks"
 	
@@ -50,4 +46,8 @@ else
 
 	info "Restarting stack with updated configuration"
 	execute_ssh "$DEPLOYMENT_COMMAND $INPUT_ARGS" 2>&1
+else
+	info "Executing command on $INPUT_REMOTE_DOCKER_HOST"
+	info "$ $DEPLOYMENT_COMMAND $INPUT_ARGS"
+	$DEPLOYMENT_COMMAND "$INPUT_ARGS" 2>&1
 fi
