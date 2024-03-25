@@ -101,7 +101,7 @@ service_fullname=${stack_name}_${service_name}
 # Check if service exists
 if ! docker service inspect "$service_fullname" >/dev/null 2>&1; then
     echo "The service $service_fullname didn't exists"
-	exit 1
+	return
 fi
 
 secret_name_suffix=$(openssl rand -hex 2)
