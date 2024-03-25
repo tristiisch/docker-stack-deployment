@@ -98,12 +98,6 @@ service_name=$3
 secret_name=$4
 service_fullname=${stack_name}_${service_name}
 
-# Check if service exists
-if ! docker service inspect "$service_fullname" >/dev/null 2>&1; then
-    echo "The service $service_fullname didn't exists"
-	return
-fi
-
 secret_name_suffix=$(openssl rand -hex 2)
 secret_name_full="${secret_name}_${secret_name_suffix}"
 secret_values=""
@@ -138,29 +132,34 @@ info "Calculating hash for secrets"
 dotenv_secret_hash=$(calculate_hash "$dotenv_secret")
 debug "Result: $dotenv_secret_hash"
 
-info "Fetching the current secrets for service $service_fullname"
-old_service_sercrets=$(get_service_secrets "$service_fullname")
-debug "Result: $old_service_sercrets"
+# Check if service exists
+if docker service inspect "$service_fullname" >/dev/null 2>&1; then
+	info "Fetching the current secrets for service $service_fullname"
+	old_service_sercrets=$(get_service_secrets "$service_fullname")
+	debug "Result: $old_service_sercrets"
 
-info "Identifying secrets for removal"
-secrets_obsolete=$(get_secrets_obsolete "$old_service_sercrets" "$secret_label_hash_name" "$dotenv_secret_hash")
-if [ "$secrets_obsolete" != "" ]; then
-	info "Secrets to remove: $secrets_obsolete"
-fi
+	info "Identifying secrets for removal"
+	secrets_obsolete=$(get_secrets_obsolete "$old_service_sercrets" "$secret_label_hash_name" "$dotenv_secret_hash")
+	if [ "$secrets_obsolete" != "" ]; then
+		info "Secrets to remove: $secrets_obsolete"
+	fi
 
-info "Identifying secrets to preserve"
-secrets_preserves=$(get_secrets_to_preserve "$old_service_sercrets" "$secret_label_hash_name" "$dotenv_secret_hash")
-for secret_preserve in $secrets_preserves; do
-	info "Preserve the old secret \"$secret_preserve\" into the docker-compose file"
-	yq --inplace ".secrets.$secret_preserve.external = true" "$docker_compose_file_path"
+	info "Identifying secrets to preserve"
+	secrets_preserves=$(get_secrets_to_preserve "$old_service_sercrets" "$secret_label_hash_name" "$dotenv_secret_hash")
+	for secret_preserve in $secrets_preserves; do
+		info "Preserve the old secret \"$secret_preserve\" into the docker-compose file"
+		yq --inplace ".secrets.$secret_preserve.external = true" "$docker_compose_file_path"
 
-	info "Updating the $service_name service within the docker-compose file with the old secret"
-	yq --inplace ".services.$service_name.secrets += [\"$secret_preserve\"]" "$docker_compose_file_path"
-done
+		info "Updating the $service_name service within the docker-compose file with the old secret"
+		yq --inplace ".services.$service_name.secrets += [\"$secret_preserve\"]" "$docker_compose_file_path"
+	done
 
-if is_secret_exists "$old_service_sercrets" "$secret_label_hash_name" && [ "$secrets_obsolete" = "" ]; then
-	info "Secret rotation not needed"
-	return
+	if is_secret_exists "$old_service_sercrets" "$secret_label_hash_name" && [ "$secrets_obsolete" = "" ]; then
+		info "Secret rotation not needed"
+		return
+	fi
+else
+	secrets_obsolete=""
 fi
 
 info "Generate new secret: $secret_name_full"
@@ -172,14 +171,16 @@ yq --inplace ".secrets.$secret_name_full.external = true" "$docker_compose_file_
 info "Updating the $service_name service within the docker-compose file with the new secret"
 yq --inplace ".services.$service_name.secrets += [\"$secret_name_full\"]" "$docker_compose_file_path"
 
-info "Implementing post-command to remove previous secrets"
-mkdir -p "$POST_SCRIPTS_FOLDER"
-post_script_path="$POST_SCRIPTS_FOLDER\docker_secret_rm.sh"
-touch "$post_script_path"
-chmod 700 "$post_script_path"
+if [ "$secrets_obsolete" != "" ]; then
+	info "Implementing post-command to remove previous secrets"
+	mkdir -p "$POST_SCRIPTS_FOLDER"
+	post_script_path="$POST_SCRIPTS_FOLDER\docker_secret_rm.sh"
+	touch "$post_script_path"
+	chmod 700 "$post_script_path"
 
-for obsolete_secret in $secrets_obsolete; do
-	echo "docker secret remove \"$obsolete_secret\"" >> "$post_script_path"
-done
+	for obsolete_secret in $secrets_obsolete; do
+		echo "docker secret remove \"$obsolete_secret\"" >> "$post_script_path"
+	done
+fi
 
 info "Completion of Docker secret rotation"
