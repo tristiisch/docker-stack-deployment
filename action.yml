@@ -41,6 +41,9 @@ inputs:
     description: '[Docker Compose] Pull Docker images before deploying'
   stack_name:
     description: '[Docker Swarm] Specify the name of your Docker Swarm stack.'
+  deploy_foreground:
+    description: '[Docker Swarm] Waiting for the stack to complete the rolling update.'
+    default: true
   secrets:
     description: 'Update Docker Secret using rotation during Stack Update. Format is service_name secret_name key1 value1 key2 value2 ...'
   args:

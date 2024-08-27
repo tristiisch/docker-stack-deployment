@@ -9,6 +9,11 @@ DEPLOYMENT_COMMAND="docker$DOCKER_OPTIONS stack deploy"
 if [ -n "$INPUT_DOCKER_REMOVE_ORPHANS" ] && [ "$INPUT_DOCKER_REMOVE_ORPHANS" = "true" ] ; then
 	DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND --prune"
 fi
+if [ "$INPUT_DEPLOY_FOREGROUND" = "true" ] ; then
+	DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND --detach=false"
+elif [ "$INPUT_DEPLOY_FOREGROUND" = "false" ] ; then
+	DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND --detach=true"
+fi
 
 if [ -n "$INPUT_DOCKER_PRUNE" ] && [ "$INPUT_DOCKER_PRUNE" = "true" ] ; then
 	info "Cleaning up Docker resources with pruning"
@@ -39,6 +44,6 @@ else
 	DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND --compose-file -"
 
 	info "Executing command on $DOCKER_USER_HOST"
-	info "$ $DEPLOYMENT_COMMAND $INPUT_ARGS"
+	info "$ $DEPLOYMENT_COMMAND \"$INPUT_STACK_NAME\" $INPUT_ARGS"
 	$DEPLOYMENT_COMMAND "$INPUT_STACK_NAME" $INPUT_ARGS 2>&1 < "$INPUT_STACK_FILE_PATH"
 fi
