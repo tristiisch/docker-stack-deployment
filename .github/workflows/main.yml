@@ -4,17 +4,23 @@ on:
   push:
     branches:
       - "*"
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - "*"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
+      CONTAINER_NAME: "docker-throw-ssh"
+      CONTAINER_SSH_PORT: "22"
       SSH_KEY_TYPE: "ed25519"
       SSH_KEY_PATH: "$HOME/.ssh/id_ed25519"
-      SSH_PORT: "2222"
-      REMOTE_USER: "president"
-      REMOTE_HOST: "localhost:2222"
-      REMOTE_HOST_PASSWORD: "P@ssword!"
+      REMOTE_SSH_HOST: "127.0.0.1"
+      REMOTE_SSH_PORT: "2222"
+      REMOTE_SSH_USER: "president"
+      REMOTE_SSH_PASSWORD: "P@ssword!"
 
     steps:
     - uses: actions/checkout@v4
@@ -26,36 +32,60 @@ jobs:
 
     - name: Start an SSH server in a Docker container
       run: |
+        if [ -n ACT ]; then
+          docker ps -aq -f name=${{ env.CONTAINER_NAME }} | xargs -r docker rm -f
+          sudo apt update &> /dev/null
+          sudo apt install -y netcat &> /dev/null
+        fi
         docker run -d \
-          -p ${{ env.SSH_PORT }}:22 \
-          --name docker-throw-ssh \
+          --network host \
+          --name ${{ env.CONTAINER_NAME }} \
           --privileged \
-          --rm \
-          --cpus="1" --memory="1g" \
           docker_throw_ssh
-
-    - name: Generate an ssh-key
-      run: |
-        ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PATH }}" -N "" -o -a 100
-        echo "SSH_KEY_PUBLIC=$(cat \"${{ env.SSH_KEY_PATH }}.pub\")" >> $GITHUB_ENV
-
-    - name: Start an SSH server in a Docker container
-      run: |
-        apt install -y sshpass
-        sshpass -p "${{ env.REMOTE_HOST_PASSWORD }}" ssh-copy-id -o StrictHostKeyChecking=no -i "${{ env.SSH_KEY_PATH }}" "${{ env.REMOTE_USER }}@${{ env.REMOTE_HOST }}"
+        docker ps -a
+        echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }}..."
+        timeout 30 bash -c 'while ! nc -zv ${{ env.REMOTE_SSH_HOST }} ${{ env.REMOTE_SSH_PORT }}; do sleep 1; done'
+        echo "SSH server port is open."
+        ssh-keyscan -v -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.REMOTE_SSH_PORT }} ${{ env.REMOTE_SSH_HOST }} || true
+        echo "SSH server is available."
 
     - name: Retrieve SSH Public Key
-      id: get_key
       run: |
-        PUBLIC_KEY=$(ssh-keyscan -t "${{ env.SSH_KEY_TYPE }}" remote_host)
+        docker ps -a
+        PUBLIC_KEY=$(ssh-keyscan -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.REMOTE_SSH_PORT }} ${{ env.REMOTE_SSH_HOST }})
         echo "SSH_PUBLIC_KEY=${PUBLIC_KEY}" >> $GITHUB_ENV
+
+    - name: Generate an ssh-key & copy ssh-key in container
+      run: |
+        if [ -n ACT ]; then
+          sudo apt update
+          sudo apt install -y sshpass
+        fi
+        ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PATH }}" -N "" -o -a 100
+        echo "SSH_KEY_PUBLIC=$(cat ${{ env.SSH_KEY_PATH }}.pub)" >> $GITHUB_ENV
+        sudo apt install -y sshpass
+        sshpass -p "${{ env.REMOTE_SSH_PASSWORD }}" \
+          ssh-copy-id -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
+            -i "${{ env.SSH_KEY_PATH }}.pub" \
+            -p "${{ env.REMOTE_SSH_PORT }}" \
+            "${{ env.REMOTE_SSH_USER }}@${{ env.REMOTE_SSH_HOST }}"
+
+    - name: Print logs on error
+      if: failure()
+      run: |
+        echo "Printing container logs"
+        docker logs ${{ env.CONTAINER_NAME }} || (echo "No container ${{ env.CONTAINER_NAME }} found" && exit 1)
+        echo "Printing service status"
+        docker exec ${{ env.CONTAINER_NAME }} service sshd status || (echo "No sshd service found" && exit 1)
+        echo "Printing SSH logs from /var/log/auth.log"
+        docker exec ${{ env.CONTAINER_NAME }} cat /var/log/auth.log | grep sshd || (echo "No sshd logs found" && exit 1)
 
     - name: Start Deployment 1
       uses: tristiisch/docker-stack-deployment@v2.1
       with:
         deployment_mode: docker-swarm
-        remote_docker_host: ${{ env.REMOTE_HOST }}
-        remote_docker_username: ${{ env.REMOTE_USER }}
+        remote_docker_host: "${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }}"
+        remote_docker_username: ${{ env.REMOTE_SSH_USER }}
         ssh_private_key: ${{ env.SSH_KEY_PUBLIC }}
         ssh_public_key: ${{ env.SSH_PUBLIC_KEY }}
         stack_file_path: ./tests/docker-compose.yml

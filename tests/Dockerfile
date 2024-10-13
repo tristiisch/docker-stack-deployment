@@ -20,3 +20,7 @@ RUN useradd -m -s $SHELL president \
 	&& usermod -aG docker president \
 	&& chmod 700 -R /home/president \
 	&& echo 'president:P@ssword!' | chpasswd
+
+RUN echo "Port 2222" >> /etc/ssh/sshd_config.d/custom.conf
+
+EXPOSE 2222
