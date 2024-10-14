@@ -79,7 +79,7 @@ jobs:
         docker exec ${{ env.CONTAINER_NAME }} cat /var/log/auth.log | grep sshd || (echo "No sshd logs found" && exit 1)
 
     - name: Start Deployment 1
-      uses: tristiisch/docker-stack-deployment@v2.1
+      uses: ./
       with:
         deployment_mode: docker-swarm
         remote_docker_host: "${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }}"
