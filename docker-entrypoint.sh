@@ -86,6 +86,7 @@ case $INPUT_DEPLOYMENT_MODE in
 	# Rotate secret if any
 	POST_SCRIPTS_FOLDER=""
 	if [ -n "${INPUT_SECRETS+set}" ]; then
+		info "INPUT_SECRETS is define: $INPUT_SECRETS"
 		POST_SCRIPTS_FOLDER="/opt/scripts/post"
 		export POST_SCRIPTS_FOLDER
 		"$WORKDIR/scripts/docker_secrets.sh" "$INPUT_STACK_FILE_PATH" "$INPUT_STACK_NAME" $INPUT_SECRETS
