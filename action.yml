@@ -46,6 +46,7 @@ inputs:
     default: true
   secrets:
     description: 'Update Docker Secret using rotation during Stack Update. Format is service_name secret_name key1 value1 key2 value2 ...'
+    default: ""
   args:
     description: 'Command arguments for deployment'
   debug:
