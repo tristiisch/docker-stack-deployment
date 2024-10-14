@@ -1,4 +1,4 @@
-name: Example usage
+name: Deployement Tests
 
 on:
   push:
@@ -51,9 +51,8 @@ jobs:
 
     - name: Retrieve SSH Public Key
       run: |
-        docker ps -a
         PUBLIC_KEY=$(ssh-keyscan -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.REMOTE_SSH_PORT }} ${{ env.REMOTE_SSH_HOST }})
-        echo "SSH_PUBLIC_KEY=${PUBLIC_KEY}" >> $GITHUB_ENV
+        echo "SSH_KEY_PUBLIC_VALUE=${PUBLIC_KEY}" >> $GITHUB_ENV
 
     - name: Generate an ssh-key & copy ssh-key in container
       run: |
@@ -63,7 +62,6 @@ jobs:
         fi
         ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PATH }}" -N "" -o -a 100
         echo "SSH_KEY_PUBLIC=$(cat ${{ env.SSH_KEY_PATH }}.pub)" >> $GITHUB_ENV
-        sudo apt install -y sshpass
         sshpass -p "${{ env.REMOTE_SSH_PASSWORD }}" \
           ssh-copy-id -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
             -i "${{ env.SSH_KEY_PATH }}.pub" \
@@ -81,12 +79,12 @@ jobs:
         docker exec ${{ env.CONTAINER_NAME }} cat /var/log/auth.log | grep sshd || (echo "No sshd logs found" && exit 1)
 
     - name: Start Deployment 1
-      uses: tristiisch/docker-stack-deployment@v2.1
+      uses: ./
       with:
         deployment_mode: docker-swarm
         remote_docker_host: "${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }}"
         remote_docker_username: ${{ env.REMOTE_SSH_USER }}
         ssh_private_key: ${{ env.SSH_KEY_PUBLIC }}
-        ssh_public_key: ${{ env.SSH_PUBLIC_KEY }}
+        ssh_public_key: ${{ env.SSH_KEY_PUBLIC_VALUE }}
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx_1

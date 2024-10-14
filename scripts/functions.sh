@@ -49,11 +49,14 @@ EOF
 
 setup_remote_docker() {
 	if ! docker context inspect "$DOCKER_CONTEXT_NAME" >/dev/null 2>&1; then
+		info "Create docker context"
 		docker context create "$DOCKER_CONTEXT_NAME" --docker "host=ssh://$DOCKER_USER_HOST:$INPUT_REMOTE_DOCKER_PORT"
 	fi
 
 	current_context=$(docker context show)
+	info "Current context used is $current_context"
 	if [ "$current_context" != "$DOCKER_CONTEXT_NAME" ]; then
+		info "Use docker context"
 		docker context use $DOCKER_CONTEXT_NAME
 	fi
 }
