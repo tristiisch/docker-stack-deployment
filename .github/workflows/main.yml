@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      CONTAINER_NAME: "docker-throw-ssh"
+      CONTAINER_NAME: "docker_throw_ssh"
       CONTAINER_SSH_PORT: "22"
       SSH_KEY_TYPE: "ed25519"
       SSH_KEY_PATH: "$HOME/.ssh/id_ed25519"
@@ -34,7 +34,7 @@ jobs:
           --tmpfs /run/lock 
           --tmpfs /tmp 
           --privileged 
-          --name docker-throw-ssh
+          --name docker_throw_ssh
         volumes:
           - /sys/fs/cgroup:/sys/fs/cgroup
   
