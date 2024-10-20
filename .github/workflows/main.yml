@@ -22,26 +22,32 @@ jobs:
       REMOTE_SSH_USER: "president"
       REMOTE_SSH_PASSWORD: "P@ssword!"
 
+    services:
+      docker_throw_ssh:
+        image: ghcr.io/tristiisch/docker_throw_ssh:latest
+        ports:
+          - 2222:22
+        options: > 
+          --cap-add=NET_ADMIN 
+          --cap-add=NET_RAW 
+          --tmpfs /run 
+          --tmpfs /run/lock 
+          --tmpfs /tmp
+        volumes:
+          - /sys/fs/cgroup:/sys/fs/cgroup
+  
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
 
-    - name: Build a Docker image with ssh & docker
-      run: docker build -f tests/Dockerfile -t docker_throw_ssh .
-
-    - name: Start an SSH server in a Docker container
+    - name: Wait for SSH server
       run: |
         if [ -n ACT ]; then
           docker ps -aq -f name=${{ env.CONTAINER_NAME }} | xargs -r docker rm -f
           sudo apt update &> /dev/null
           sudo apt install -y netcat &> /dev/null
         fi
-        docker run -d \
-          --network host \
-          --name ${{ env.CONTAINER_NAME }} \
-          --privileged \
-          docker_throw_ssh
         docker ps -a
         echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }}..."
         timeout 30 bash -c 'while ! nc -zv ${{ env.REMOTE_SSH_HOST }} ${{ env.REMOTE_SSH_PORT }}; do sleep 1; done'

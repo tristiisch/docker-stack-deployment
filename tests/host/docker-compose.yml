@@ -1,0 +1,17 @@
+services:
+  docker_throw_ssh:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    ports:
+      - 2222:22
+    tty: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
