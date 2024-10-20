@@ -32,7 +32,9 @@ jobs:
           --cap-add=NET_RAW 
           --tmpfs /run 
           --tmpfs /run/lock 
-          --tmpfs /tmp
+          --tmpfs /tmp 
+          --privileged 
+          --name docker-throw-ssh
         volumes:
           - /sys/fs/cgroup:/sys/fs/cgroup
   
