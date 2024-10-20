@@ -28,12 +28,12 @@ jobs:
         ports:
           - 2222:22
         options: > 
+          --privileged
           --cap-add=NET_ADMIN 
           --cap-add=NET_RAW 
           --tmpfs /run 
           --tmpfs /run/lock 
-          --tmpfs /tmp 
-          --privileged
+          --tmpfs /tmp
         volumes:
           - /sys/fs/cgroup:/sys/fs/cgroup
   
