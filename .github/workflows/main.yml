@@ -82,7 +82,7 @@ jobs:
       with:
         deployment_mode: docker-swarm
         remote_docker_host: "${{ env.CONTAINER_NAME }}"
-        remote_docker_port: "${{ env.REMOTE_SSH_PORT }}"
+        remote_docker_port: "22"
         remote_docker_username: ${{ env.REMOTE_SSH_USER }}
         ssh_private_key: ${{ env.SSH_KEY_PUBLIC }}
         ssh_public_key: ${{ env.SSH_KEY_PUBLIC_VALUE }}
