@@ -29,14 +29,13 @@ jobs:
         options: >
           --privileged
           --tty
+          -v /sys/fs/cgroup:/sys/fs/cgroup
           --cap-add=NET_ADMIN
           --cap-add=NET_RAW
           --tmpfs /run
           --tmpfs /run/lock
           --tmpfs /tmp
-        volumes:
-          - /sys/fs/cgroup:/sys/fs/cgroup
-  
+
     steps:
     - uses: actions/checkout@v4
       with:
