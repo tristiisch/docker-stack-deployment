@@ -1,43 +1,90 @@
-name: Example usage
+name: Deployement Tests
 
 on:
   push:
     branches:
-      - master
+      - "*"
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - "*"
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
+    env:
+      CONTAINER_SSH_PORT: "22"
+      SSH_KEY_TYPE: "ed25519"
+      SSH_KEY_PATH: "$HOME/.ssh/id_ed25519"
+      REMOTE_SSH_HOST: "127.0.0.1"
+      REMOTE_SSH_PORT: "2222"
+      REMOTE_SSH_USER: "president"
+      REMOTE_SSH_PASSWORD: "P@ssword!"
+
+    services:
+      docker-throw-ssh:
+        image: ghcr.io/tristiisch/docker_throw_ssh:latest
+        ports:
+          - 2222:22
+        options: >
+          --privileged
+          --tty
+          -v /sys/fs/cgroup:/sys/fs/cgroup
+          --cgroupns=host
+          --cap-add=NET_ADMIN
+          --cap-add=NET_RAW
+          --cap-add=SYS_ADMIN
+          --tmpfs /run
+          --tmpfs /run/lock
+          --tmpfs /tmp
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - name: Start Deployment
-      uses: wshihadeh/docker-deployment-action@master
-      with:
-        remote_docker_host: ${{ secrets.HOST }}
-        ssh_private_key: ${{ secrets.PRIVATE_KEY }}
-        ssh_public_key: ${{ secrets.PUBLIC_KEY }}
-        deployment_mode: docker-compose
-        copy_stack_file: true
-        deploy_path: /root/deployment-test
-        stack_file_name: docker-compose.yml
-        pull_images_first: true
-        keep_files: 3
-        args: -p test up -d
 
-    - name: Start Deployment without copy
-      uses: wshihadeh/docker-deployment-action@master
+    - name: Wait for SSH server
+      run: |
+        echo "docker ps"
+        docker ps -a
+        echo "mount"
+        mount | grep cgroup
+        echo "LOGS"
+        docker logs $(docker ps -aq | head -n 1)
+        echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }} ..."
+        timeout 30 bash -c 'while ! nc -zv ${{ env.REMOTE_SSH_HOST }} ${{ env.REMOTE_SSH_PORT }}; do sleep 1; done'
+        echo "SSH server port is open."
+        ssh-keyscan -v -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.REMOTE_SSH_PORT }} ${{ env.REMOTE_SSH_HOST }} || true
+        echo "SSH server is available."
+        echo "CONTAINER_NAME=$(docker ps -aq | head -n 1)" >> $GITHUB_ENV
+
+    - name: Retrieve SSH Public Key
+      run: |
+        PUBLIC_KEY=$(ssh-keyscan -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.REMOTE_SSH_PORT }} ${{ env.REMOTE_SSH_HOST }})
+        echo "SSH_KEY_PUBLIC_VALUE=${PUBLIC_KEY}" >> $GITHUB_ENV
+
+    - name: Generate an ssh-key & copy ssh-key in container
+      run: |
+        if [ -n ACT ]; then
+          sudo apt update
+          sudo apt install -y sshpass
+        fi
+        ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PATH }}" -N "" -o -a 100
+        echo "SSH_KEY_PUBLIC=$(cat ${{ env.SSH_KEY_PATH }}.pub)" >> $GITHUB_ENV
+        sshpass -p "${{ env.REMOTE_SSH_PASSWORD }}" \
+          ssh-copy-id -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
+            -i "${{ env.SSH_KEY_PATH }}.pub" \
+            -p "${{ env.REMOTE_SSH_PORT }}" \
+            "${{ env.REMOTE_SSH_USER }}@${{ env.REMOTE_SSH_HOST }}"
+
+    - name: Start Deployment 1
+      uses: ./
       with:
-        remote_docker_host: ${{ secrets.HOST }}
-        ssh_private_key: ${{ secrets.PRIVATE_KEY }}
-        ssh_public_key: ${{ secrets.PUBLIC_KEY }}
-        deployment_mode: docker-compose
-        copy_stack_file: false
-        deploy_path: /root/deployment-test
-        stack_file_name: docker-compose.yml
-        pull_images_first: true
-        keep_files: 3
-        args: -p test up -d
+        deployment_mode: docker-swarm
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
+        remote_docker_port: "22"
+        remote_docker_username: ${{ env.REMOTE_SSH_USER }}
+        ssh_private_key: ${{ env.SSH_KEY_PUBLIC }}
+        ssh_public_key: ${{ env.SSH_KEY_PUBLIC_VALUE }}
+        stack_file_path: ./tests/docker-compose.yml
+        stack_name: nginx_1
