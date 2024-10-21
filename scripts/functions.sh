@@ -19,21 +19,32 @@ setup_ssh() {
 	SSH_VERSION=$(ssh -V 2>&1)
 	debug "SSH client version : $SSH_VERSION"
 
-	info "Registering SSH key"
+	info "Create SSH folder"
 	mkdir -p "$SSH_FOLDER"
 	chmod 700 "$SSH_FOLDER"
+	if is_debug; then
+		debug "Verify permission on ssh folder"
+		ls -l "$SSH_FOLDER"
+	fi
+
+	info "Registering SSH key"
 	printf '%s\n' "$INPUT_SSH_PRIVATE_KEY" > "$KEY_PATH"
 	chmod 600 "$KEY_PATH"
+	if is_debug; then
+		debug "Verify permission on private key"
+		ls -l "$KEY_PATH"
+	fi
 
 	cat <<EOF >> "$SSH_CONFIG_PATH"
-IdentityFile $SSH_FOLDER/$KEY_NAME
-UserKnownHostsFile $KNOWN_HOST_PATH
-ControlMaster auto
-ControlPath $SSH_FOLDER/control-%C
-ControlPersist yes
+Host $SSH_HOST:$SSH_PORT
+	IdentityFile $KEY_PATH
+	UserKnownHostsFile $KNOWN_HOST_PATH
+	ControlMaster auto
+	ControlPath $SSH_FOLDER/control-%C
+	ControlPersist yes
 EOF
 
-	STRICT_HOST="no"
+	STRICT_HOST="accept-new"
 	if [ -n "$INPUT_SSH_PUBLIC_KEY" ]; then
 		STRICT_HOST="yes"
 		if is_debug; then
@@ -43,7 +54,11 @@ EOF
 		fi
 
 		info "Adding known hosts"
-		printf '[%s]:%s %s\n' "$SSH_HOST" "$SSH_PORT" "$INPUT_SSH_PUBLIC_KEY" > "$KNOWN_HOST_PATH"
+		if [ "$SSH_PORT" = "22" ]; then
+			printf '%s %s\n' "$SSH_HOST" "$INPUT_SSH_PUBLIC_KEY" > "$KNOWN_HOST_PATH"
+		else
+			printf '[%s]:%s %s\n' "$SSH_HOST" "$SSH_PORT" "$INPUT_SSH_PUBLIC_KEY" > "$KNOWN_HOST_PATH"
+		fi
 		chmod 600 "$KNOWN_HOST_PATH"
 		if is_debug; then
 			debug "Verify permission on known hosts"
@@ -56,32 +71,40 @@ EOF
 	printf 'StrictHostKeyChecking %s\n' $STRICT_HOST >> "$SSH_CONFIG_PATH"
 	SSH_CONFIG=$(cat "$SSH_CONFIG_PATH")
 	debug "$SSH_CONFIG_PATH :" "$SSH_CONFIG"
+
+	info "Testing SSH connection ..."
+	ssh -v -i "$KEY_PATH" -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
+	info "Done !"
 }
 
 setup_remote_docker() {
+	SSH_PORT=$INPUT_REMOTE_DOCKER_PORT
 	if ! docker context inspect "$DOCKER_CONTEXT_NAME" >/dev/null 2>&1; then
 		info "Create docker context"
-		docker context create "$DOCKER_CONTEXT_NAME" --docker "host=ssh://$DOCKER_USER_HOST:$INPUT_REMOTE_DOCKER_PORT"
+		debug "Adding context host=ssh://$DOCKER_USER_HOST:$SSH_PORT"
+		docker context create "$DOCKER_CONTEXT_NAME" --docker "host=ssh://$DOCKER_USER_HOST:$SSH_PORT?identityfile=$KEY_PATH"
 	fi
 
 	current_context=$(docker context show)
 	info "Current context used is $current_context"
 	if [ "$current_context" != "$DOCKER_CONTEXT_NAME" ]; then
 		info "Use docker context"
-		docker context use $DOCKER_CONTEXT_NAME
+		docker context use "$DOCKER_CONTEXT_NAME"
 	fi
 }
 
 execute_ssh(){
+	SSH_PORT=$INPUT_REMOTE_DOCKER_PORT
 	verbose_arg=""
 	if is_debug; then
 		verbose_arg="-v"
 	fi
 	debug "Execute Over SSH : $ $*"
-	ssh $verbose_arg -p "$INPUT_REMOTE_DOCKER_PORT" "$DOCKER_USER_HOST" "$@" 2>&1
+	ssh $verbose_arg -p "$SSH_PORT" "$DOCKER_USER_HOST" "$@" 2>&1
 }
 
 copy_ssh(){
+	SSH_PORT=$INPUT_REMOTE_DOCKER_PORT
 	verbose_arg=""
 	if is_debug; then
 		verbose_arg="-v"
@@ -89,7 +112,7 @@ copy_ssh(){
 	local_file="$1"
 	remote_file="$2"
 	debug "Copy Over SSH : $local_file -> $remote_file"
-	scp $verbose_arg -P "$INPUT_REMOTE_DOCKER_PORT" "$local_file" "$DOCKER_USER_HOST:$remote_file" 2>&1
+	scp $verbose_arg -P "$SSH_PORT" "$local_file" "$DOCKER_USER_HOST:$remote_file" 2>&1
 }
 
 is_debug() {
@@ -111,21 +134,41 @@ WHITE='\e[0;37m'
 RESET='\e[0m'
 
 error() {
-    printf "${RED}ERROR\t%s${RESET}\n" "$*"
+    printf "${RED}ERROR\t%s${RESET}\n" "$1"
+    shift
+    while [ "$#" -gt 0 ]; do
+        printf "%s\n" "$1"
+        shift
+    done
     exit 1
 }
 
 warning() {
-    printf "${YELLOW}WARNING\t%s${RESET}\n" "$*"
+    printf "${YELLOW}WARNING\t%s${RESET}\n" "$1"
+    shift
+    while [ "$#" -gt 0 ]; do
+        printf "%s\n" "$1"
+        shift
+    done
 }
 
 info() {
-    printf "${CYAN}INFO\t%s${RESET}\n" "$*"
+    printf "${CYAN}INFO\t%s${RESET}\n" "$1"
+    shift
+    while [ "$#" -gt 0 ]; do
+        printf "%s\n" "$1"
+        shift
+    done
 }
 
 debug() {
     if ! is_debug; then
         return
     fi
-    printf "${MAGENTA}DEBUG\t%s${RESET}\n" "$*"
+    printf "${MAGENTA}DEBUG\t%s${RESET}\n" "$1"
+    shift
+    while [ "$#" -gt 0 ]; do
+        printf "%s\n" "$1"
+        shift
+    done
 }
