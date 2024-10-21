@@ -52,7 +52,7 @@ jobs:
         fi
         CONTAINER_NAME=$(docker ps -a --format '{{.Names}}' | head -n 1)
         echo "CONTAINER_NAME=${CONTAINER_NAME}" >> $GITHUB_ENV
-        echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }} on container $(docker ps -a --format '{{.Names}}' | head -n 1)..."
+        echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }} on container ${{ env.CONTAINER_NAME }}..."
         timeout 30 bash -c 'while ! nc -zv ${{ env.REMOTE_SSH_HOST }} ${{ env.REMOTE_SSH_PORT }}; do sleep 1; done'
         echo "SSH server port is open."
         ssh-keyscan -v -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.REMOTE_SSH_PORT }} ${{ env.REMOTE_SSH_HOST }} || true
@@ -80,6 +80,7 @@ jobs:
     - name: Print logs on error
       if: failure()
       run: |
+        docker ps -a
         CONTAINER_NAME=$(docker ps -a --format '{{.Names}}' | head -n 1)
         echo "CONTAINER_NAME=${CONTAINER_NAME}" >> $GITHUB_ENV
         echo "Printing container logs"
