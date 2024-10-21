@@ -44,13 +44,18 @@ EOF
 
 		info "Adding known hosts"
 		printf '[%s]:%s %s\n' "$SSH_HOST" "$SSH_PORT" "$INPUT_SSH_PUBLIC_KEY" > "$KNOWN_HOST_PATH"
+		chmod 600 "$KNOWN_HOST_PATH"
+		if is_debug; then
+			debug "Verify permission on known hosts"
+			ls -l "$KNOWN_HOST_PATH"
+		fi
 
 		KNOWN_HOST=$(cat "$KNOWN_HOST_PATH")
-		debug "$KNOWN_HOST_PATH :\\n$KNOWN_HOST"
+		debug "$KNOWN_HOST_PATH :" "$KNOWN_HOST"
 	fi
 	printf 'StrictHostKeyChecking %s\n' $STRICT_HOST >> "$SSH_CONFIG_PATH"
 	SSH_CONFIG=$(cat "$SSH_CONFIG_PATH")
-	debug "$SSH_CONFIG_PATH :\\n$SSH_CONFIG"
+	debug "$SSH_CONFIG_PATH :" "$SSH_CONFIG"
 }
 
 setup_remote_docker() {
