@@ -51,7 +51,7 @@ jobs:
           sudo apt update &> /dev/null
           sudo apt install -y netcat &> /dev/null
         fi
-        echo "CONTAINER_NAME=$(docker ps --format '{{.Names}}' | head -n 1)" >> $GITHUB_ENV
+        echo "CONTAINER_NAME=$(docker ps -a --format '{{.Names}}' | head -n 1)" >> $GITHUB_ENV
         echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }}..."
         timeout 30 bash -c 'while ! nc -zv ${{ env.REMOTE_SSH_HOST }} ${{ env.REMOTE_SSH_PORT }}; do sleep 1; done'
         echo "SSH server port is open."
