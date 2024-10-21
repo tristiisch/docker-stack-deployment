@@ -51,8 +51,6 @@ jobs:
         mount | grep cgroup
         echo "LOGS"
         docker logs $(docker ps -aq | head -n 1)
-        echo "docker ps"
-        docker ps -a
         echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }} ..."
         timeout 30 bash -c 'while ! nc -zv ${{ env.REMOTE_SSH_HOST }} ${{ env.REMOTE_SSH_PORT }}; do sleep 1; done'
         echo "SSH server port is open."
@@ -78,18 +76,19 @@ jobs:
             -p "${{ env.REMOTE_SSH_PORT }}" \
             "${{ env.REMOTE_SSH_USER }}@${{ env.REMOTE_SSH_HOST }}"
 
-    - name: Print logs on error
-      if: failure()
+    - name: Wait for SSH server
       run: |
+        echo "docker ps"
         docker ps -a
-        CONTAINER_NAME=$(docker ps -a --format '{{.Names}}' | head -n 1)
-        echo "CONTAINER_NAME=${CONTAINER_NAME}" >> $GITHUB_ENV
-        echo "Printing container logs"
-        docker logs ${{ env.CONTAINER_NAME }} || (echo "No container ${{ env.CONTAINER_NAME }} found" && exit 1)
-        echo "Printing service status"
-        docker exec ${{ env.CONTAINER_NAME }} service sshd status || (echo "No sshd service found" && exit 1)
-        echo "Printing SSH logs from /var/log/auth.log"
-        docker exec ${{ env.CONTAINER_NAME }} cat /var/log/auth.log | grep sshd || (echo "No sshd logs found" && exit 1)
+        echo "mount"
+        mount | grep cgroup
+        echo "LOGS"
+        docker logs $(docker ps -aq | head -n 1)
+        echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }} ..."
+        timeout 30 bash -c 'while ! nc -zv ${{ env.REMOTE_SSH_HOST }} ${{ env.REMOTE_SSH_PORT }}; do sleep 1; done'
+        echo "SSH server port is open."
+        ssh-keyscan -v -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.REMOTE_SSH_PORT }} ${{ env.REMOTE_SSH_HOST }} || true
+        echo "SSH server is available."
 
     - name: Start Deployment 1
       uses: ./
