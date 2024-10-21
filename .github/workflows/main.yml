@@ -22,7 +22,7 @@ jobs:
       REMOTE_SSH_PASSWORD: "P@ssword!"
 
     services:
-      docker_throw_ssh:
+      docker-throw-ssh:
         image: ghcr.io/tristiisch/docker_throw_ssh:latest
         ports:
           - 2222:22
@@ -94,7 +94,7 @@ jobs:
       uses: ./
       with:
         deployment_mode: docker-swarm
-        remote_docker_host: "${{ env.REMOTE_SSH_HOST }}"
+        remote_docker_host: "docker-throw-ssh"
         remote_docker_port: "${{ env.REMOTE_SSH_PORT }}"
         remote_docker_username: ${{ env.REMOTE_SSH_USER }}
         ssh_private_key: ${{ env.SSH_KEY_PUBLIC }}
