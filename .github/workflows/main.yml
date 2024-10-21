@@ -30,7 +30,7 @@ jobs:
           --privileged
           --tty
           -v /sys/fs/cgroup:/sys/fs/cgroup
-          --cgroup-parent=/docker
+          --cgroupns=host
           --cap-add=NET_ADMIN
           --cap-add=NET_RAW
           --cap-add=SYS_ADMIN
