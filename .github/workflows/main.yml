@@ -27,12 +27,13 @@ jobs:
         image: ghcr.io/tristiisch/docker_throw_ssh:latest
         ports:
           - 2222:22
-          # --privileged
-        options: > 
-          --cap-add=NET_ADMIN 
-          --cap-add=NET_RAW 
-          --tmpfs /run 
-          --tmpfs /run/lock 
+        options: >
+          --privileged
+          --tty
+          --cap-add=NET_ADMIN
+          --cap-add=NET_RAW
+          --tmpfs /run
+          --tmpfs /run/lock
           --tmpfs /tmp
         volumes:
           - /sys/fs/cgroup:/sys/fs/cgroup
@@ -44,12 +45,12 @@ jobs:
 
     - name: Wait for SSH server
       run: |
+        docker ps -a
         if [ -n ACT ]; then
           docker ps -aq -f name=${{ env.CONTAINER_NAME }} | xargs -r docker rm -f
           sudo apt update &> /dev/null
           sudo apt install -y netcat &> /dev/null
         fi
-        docker ps -a
         echo "CONTAINER_NAME=$(docker ps --format '{{.Names}}' | head -n 1)" >> $GITHUB_ENV
         echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }}..."
         timeout 30 bash -c 'while ! nc -zv ${{ env.REMOTE_SSH_HOST }} ${{ env.REMOTE_SSH_PORT }}; do sleep 1; done'
