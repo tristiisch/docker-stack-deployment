@@ -50,8 +50,8 @@ jobs:
           sudo apt update &> /dev/null
           sudo apt install -y netcat &> /dev/null
         fi
-        echo "CONTAINER_NAME=$(docker ps -a --format '{{.Names}}' | head -n 1 2>1)" >> $GITHUB_ENV
-        echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }} on container ${{ env.CONTAINER_NAME }}..."
+        CONTAINER_NAME=$(docker ps -a --format '{{.Names}}' | head -n 1)
+        echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }} on container $CONTAINER_NAME..."
         timeout 30 bash -c 'while ! nc -zv ${{ env.REMOTE_SSH_HOST }} ${{ env.REMOTE_SSH_PORT }}; do sleep 1; done'
         echo "SSH server port is open."
         ssh-keyscan -v -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.REMOTE_SSH_PORT }} ${{ env.REMOTE_SSH_HOST }} || true
@@ -79,12 +79,13 @@ jobs:
     - name: Print logs on error
       if: failure()
       run: |
+        CONTAINER_NAME=$(docker ps -a --format '{{.Names}}' | head -n 1)
         echo "Printing container logs"
-        docker logs ${{ env.CONTAINER_NAME }} || (echo "No container ${{ env.CONTAINER_NAME }} found" && exit 1)
+        docker logs $CONTAINER_NAME || (echo "No container $CONTAINER_NAME found" && exit 1)
         echo "Printing service status"
-        docker exec ${{ env.CONTAINER_NAME }} service sshd status || (echo "No sshd service found" && exit 1)
+        docker exec $CONTAINER_NAME service sshd status || (echo "No sshd service found" && exit 1)
         echo "Printing SSH logs from /var/log/auth.log"
-        docker exec ${{ env.CONTAINER_NAME }} cat /var/log/auth.log | grep sshd || (echo "No sshd logs found" && exit 1)
+        docker exec $CONTAINER_NAME cat /var/log/auth.log | grep sshd || (echo "No sshd logs found" && exit 1)
 
     - name: Start Deployment 1
       uses: ./
