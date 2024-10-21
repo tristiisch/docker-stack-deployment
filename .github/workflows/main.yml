@@ -30,8 +30,10 @@ jobs:
           --privileged
           --tty
           -v /sys/fs/cgroup:/sys/fs/cgroup
+          --cgroup-parent=/docker
           --cap-add=NET_ADMIN
           --cap-add=NET_RAW
+          --cap-add=SYS_ADMIN
           --tmpfs /run
           --tmpfs /run/lock
           --tmpfs /tmp
@@ -45,8 +47,8 @@ jobs:
       run: |
         echo "docker ps"
         docker ps -a
-        echo "docker ps"
-        docker ps -a
+        echo "mount"
+        mount | grep cgroup
         echo "LOGS"
         docker logs $(docker ps -aq | head -n 1)
         echo "docker ps"
