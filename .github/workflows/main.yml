@@ -70,7 +70,7 @@ jobs:
           sudo apt install -y sshpass
         fi
         ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PATH }}" -N "" -o -a 100
-        echo "SSH_KEY_PUBLIC=$(cat ${{ env.SSH_KEY_PATH }}.pub)" >> $GITHUB_ENV
+        echo "SSH_KEY_PRIVATE=$(cat ${{ env.SSH_KEY_PATH }}.pub)" >> $GITHUB_ENV
         sshpass -p "${{ env.REMOTE_SSH_PASSWORD }}" \
           ssh-copy-id -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
             -i "${{ env.SSH_KEY_PATH }}.pub" \
@@ -84,7 +84,7 @@ jobs:
         remote_docker_host: "${{ env.CONTAINER_NAME }}"
         remote_docker_port: "${{ env.CONTAINER_SSH_PORT }}"
         remote_docker_username: ${{ env.REMOTE_SSH_USER }}
-        ssh_private_key: ${{ env.SSH_KEY_PUBLIC }}
+        ssh_private_key: ${{ env.SSH_KEY_PRIVATE }}
         ssh_public_key: ${{ env.SSH_KEY_PUBLIC_VALUE }}
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx_1

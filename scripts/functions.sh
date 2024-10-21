@@ -26,11 +26,11 @@ setup_ssh() {
 	chmod 600 "$KEY_PATH"
 
 	cat <<EOF >> "$SSH_CONFIG_PATH"
-	IdentityFile $SSH_FOLDER/$KEY_NAME
-	UserKnownHostsFile $KNOWN_HOST_PATH
-	ControlMaster auto
-	ControlPath $SSH_FOLDER/control-%C
-	ControlPersist yes
+IdentityFile $SSH_FOLDER/$KEY_NAME
+UserKnownHostsFile $KNOWN_HOST_PATH
+ControlMaster auto
+ControlPath $SSH_FOLDER/control-%C
+ControlPersist yes
 EOF
 
 	STRICT_HOST="no"
@@ -43,14 +43,14 @@ EOF
 		fi
 
 		info "Adding known hosts"
-		printf '%s %s\n' "[$SSH_HOST]:$SSH_PORT" "$INPUT_SSH_PUBLIC_KEY" > "$KNOWN_HOST_PATH"
+		printf '[%s]:%s %s\n' "$SSH_HOST" "$SSH_PORT" "$INPUT_SSH_PUBLIC_KEY" > "$KNOWN_HOST_PATH"
 
 		KNOWN_HOST=$(cat "$KNOWN_HOST_PATH")
-		debug "$KNOWN_HOST_PATH :\n$KNOWN_HOST"
+		debug "$KNOWN_HOST_PATH :\\n$KNOWN_HOST"
 	fi
 	printf 'StrictHostKeyChecking %s\n' $STRICT_HOST >> "$SSH_CONFIG_PATH"
 	SSH_CONFIG=$(cat "$SSH_CONFIG_PATH")
-	debug "$SSH_CONFIG_PATH :\n$SSH_CONFIG"
+	debug "$SSH_CONFIG_PATH :\\n$SSH_CONFIG"
 }
 
 setup_remote_docker() {
