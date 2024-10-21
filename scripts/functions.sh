@@ -3,8 +3,8 @@ set -eu
 
 KEY_NAME="docker_key"
 SSH_FOLDER="$HOME/.ssh"
+SSH_CONFIG_PATH="/etc/ssh/ssh_config.d/docker_stack_deployement.conf"
 KEY_PATH="$SSH_FOLDER/$KEY_NAME"
-STRICT_HOST="yes"
 KNOWN_HOST_PATH=$SSH_FOLDER/known_hosts
 DOCKER_CONTEXT_NAME="docker-remote"
 
@@ -14,7 +14,7 @@ setup_ssh() {
 		return 0
 	fi
 	SSH_HOST=$INPUT_REMOTE_DOCKER_HOST
-	SSH_KEY_TYPE=$(echo "$INPUT_SSH_PUBLIC_KEY" | cut -d ' ' -f 1)
+	SSH_PORT=$INPUT_REMOTE_DOCKER_PORT
 
 	SSH_VERSION=$(ssh -V 2>&1)
 	debug "SSH client version : $SSH_VERSION"
@@ -25,26 +25,32 @@ setup_ssh() {
 	printf '%s\n' "$INPUT_SSH_PRIVATE_KEY" > "$KEY_PATH"
 	chmod 600 "$KEY_PATH"
 
-	if is_debug; then
-		SERVER_PUBLIC_KEY=$(ssh-keyscan -t "$SSH_KEY_TYPE" "$SSH_HOST" 2>&1)
-		debug "Public key of ssh server $SSH_KEY_TYPE : $SERVER_PUBLIC_KEY"
-	fi
-
-	info "Adding known hosts"
-	printf '%s %s\n' "$SSH_HOST" "$INPUT_SSH_PUBLIC_KEY" > "$KNOWN_HOST_PATH"
-
-	KNOWN_HOST=$(cat "$KNOWN_HOST_PATH")
-	debug "$KNOWN_HOST"
-
-	cat <<EOF >> "/etc/ssh/ssh_config.d/docker_stack_deployement.conf"
+	cat <<EOF >> "$SSH_CONFIG_PATH"
 	IdentityFile $SSH_FOLDER/$KEY_NAME
 	UserKnownHostsFile $KNOWN_HOST_PATH
-	StrictHostKeyChecking $STRICT_HOST
 	ControlMaster auto
 	ControlPath $SSH_FOLDER/control-%C
 	ControlPersist yes
 EOF
 
+	STRICT_HOST="no"
+	if [ -n "$INPUT_SSH_PUBLIC_KEY" ]; then
+		STRICT_HOST="yes"
+		if is_debug; then
+			SSH_KEY_TYPE=$(echo "$INPUT_SSH_PUBLIC_KEY" | cut -d ' ' -f 1)
+			debug "Getting public key $SSH_KEY_TYPE of ssh server $SSH_HOST:$SSH_PORT ..."
+			ssh-keyscan -v -t "$SSH_KEY_TYPE" -p "$SSH_PORT" "$SSH_HOST"
+		fi
+
+		info "Adding known hosts"
+		printf '%s %s\n' "[$SSH_HOST]:$SSH_PORT" "$INPUT_SSH_PUBLIC_KEY" > "$KNOWN_HOST_PATH"
+
+		KNOWN_HOST=$(cat "$KNOWN_HOST_PATH")
+		debug "$KNOWN_HOST_PATH :\n$KNOWN_HOST"
+	fi
+	printf 'StrictHostKeyChecking %s\n' $STRICT_HOST >> "$SSH_CONFIG_PATH"
+	SSH_CONFIG=$(cat "$SSH_CONFIG_PATH")
+	debug "$SSH_CONFIG_PATH :\n$SSH_CONFIG"
 }
 
 setup_remote_docker() {
