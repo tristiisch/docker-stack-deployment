@@ -61,7 +61,7 @@ jobs:
     - name: Retrieve SSH Public Key
       run: |
         PUBLIC_KEY=$(ssh-keyscan -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.REMOTE_SSH_PORT }} ${{ env.REMOTE_SSH_HOST }})
-        echo "SSH_KEY_PUBLIC_VALUE=${PUBLIC_KEY/\[127.0.0.1\]\:2222/[${{ env.CONTAINER_NAME }}]:${{ env.CONTAINER_SSH_PORT }}}" >> $GITHUB_ENV
+        echo "SSH_KEY_PUBLIC_VALUE=$(echo $PUBLIC_KEY | cut -d' ' -f2-)" >> $GITHUB_ENV
 
     - name: Generate an ssh-key & copy ssh-key in container
       run: |
