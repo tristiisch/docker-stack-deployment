@@ -61,6 +61,8 @@ RUN apt update && \
 RUN mkdir -p /run/sshd \
 	&& echo 'PermitRootLogin no' >> /etc/ssh/sshd_config.d/custom \
 	&& echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config.d/custom
+	# && rm /etc/ssh/ssh_host_*
+	# ssh-keygen -A
 
 # ---------- SSH Account
 RUN useradd -m -s $SHELL president \

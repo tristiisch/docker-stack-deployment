@@ -22,21 +22,22 @@ jobs:
       REMOTE_SSH_PASSWORD: "P@ssword!"
 
     services:
-      docker_throw_ssh:
+      docker-throw-ssh:
         image: ghcr.io/tristiisch/docker_throw_ssh:latest
         ports:
           - 2222:22
         options: >
           --privileged
           --tty
+          -v /sys/fs/cgroup:/sys/fs/cgroup
+          --cgroupns=host
           --cap-add=NET_ADMIN
           --cap-add=NET_RAW
+          --cap-add=SYS_ADMIN
           --tmpfs /run
           --tmpfs /run/lock
           --tmpfs /tmp
-        volumes:
-          - /sys/fs/cgroup:/sys/fs/cgroup
-  
+
     steps:
     - uses: actions/checkout@v4
       with:
@@ -44,24 +45,23 @@ jobs:
 
     - name: Wait for SSH server
       run: |
+        echo "docker ps"
         docker ps -a
-        if [ -n ACT ]; then
-          docker ps -aq -f name="docker_throw_ssh" | xargs -r docker rm -f
-          sudo apt update &> /dev/null
-          sudo apt install -y netcat &> /dev/null
-        fi
-        CONTAINER_NAME=$(docker ps -a --format '{{.Names}}' | head -n 1)
-        echo "CONTAINER_NAME=${CONTAINER_NAME}" >> $GITHUB_ENV
-        echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }} on container ${{ env.CONTAINER_NAME }}..."
+        echo "mount"
+        mount | grep cgroup
+        echo "LOGS"
+        docker logs $(docker ps -aq | head -n 1)
+        echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }} ..."
         timeout 30 bash -c 'while ! nc -zv ${{ env.REMOTE_SSH_HOST }} ${{ env.REMOTE_SSH_PORT }}; do sleep 1; done'
         echo "SSH server port is open."
         ssh-keyscan -v -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.REMOTE_SSH_PORT }} ${{ env.REMOTE_SSH_HOST }} || true
         echo "SSH server is available."
+        echo "CONTAINER_NAME=$(docker ps -aq | head -n 1)" >> $GITHUB_ENV
 
     - name: Retrieve SSH Public Key
       run: |
         PUBLIC_KEY=$(ssh-keyscan -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.REMOTE_SSH_PORT }} ${{ env.REMOTE_SSH_HOST }})
-        echo "SSH_KEY_PUBLIC_VALUE=${PUBLIC_KEY}" >> $GITHUB_ENV
+        echo "SSH_KEY_PUBLIC_VALUE=${PUBLIC_KEY/\[127.0.0.1\]\:2222/[${{ env.CONTAINER_NAME }}]:${{ env.CONTAINER_SSH_PORT }}}" >> $GITHUB_ENV
 
     - name: Generate an ssh-key & copy ssh-key in container
       run: |
@@ -77,21 +77,12 @@ jobs:
             -p "${{ env.REMOTE_SSH_PORT }}" \
             "${{ env.REMOTE_SSH_USER }}@${{ env.REMOTE_SSH_HOST }}"
 
-    - name: Print logs on error
-      if: failure()
-      run: |
-        echo "Printing container logs"
-        docker logs ${{ ENV.CONTAINER_NAME }} || (echo "No container ${{ ENV.CONTAINER_NAME }} found" && exit 1)
-        echo "Printing service status"
-        docker exec ${{ ENV.CONTAINER_NAME }} service sshd status || (echo "No sshd service found" && exit 1)
-        echo "Printing SSH logs from /var/log/auth.log"
-        docker exec ${{ ENV.CONTAINER_NAME }} cat /var/log/auth.log | grep sshd || (echo "No sshd logs found" && exit 1)
-
     - name: Start Deployment 1
       uses: ./
       with:
         deployment_mode: docker-swarm
-        remote_docker_host: "${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }}"
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
+        remote_docker_port: "${{ env.CONTAINER_SSH_PORT }}"
         remote_docker_username: ${{ env.REMOTE_SSH_USER }}
         ssh_private_key: ${{ env.SSH_KEY_PUBLIC }}
         ssh_public_key: ${{ env.SSH_KEY_PUBLIC_VALUE }}
