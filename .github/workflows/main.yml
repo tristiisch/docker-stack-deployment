@@ -44,14 +44,14 @@ jobs:
 
     - name: Wait for SSH server
       run: |
+        echo "docker ps"
         docker ps -a
-        if [ -n ACT ]; then
-          docker ps -aq -f name="docker_throw_ssh" | xargs -r docker rm -f
-          sudo apt update &> /dev/null
-          sudo apt install -y netcat &> /dev/null
-        fi
+        echo "docker ps"
+        docker ps -a
         echo "LOGS"
         docker logs $(docker ps -aq | head -n 1)
+        echo "docker ps"
+        docker ps -a
         echo "Waiting for SSH server at ${{ env.REMOTE_SSH_HOST }}:${{ env.REMOTE_SSH_PORT }} ..."
         timeout 30 bash -c 'while ! nc -zv ${{ env.REMOTE_SSH_HOST }} ${{ env.REMOTE_SSH_PORT }}; do sleep 1; done'
         echo "SSH server port is open."
