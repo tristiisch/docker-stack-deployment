@@ -89,7 +89,7 @@ jobs:
         ssh -i "${{ env.SSH_KEY_PATH }}" -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' -p "${{ env.REMOTE_SSH_PORT }}" "${{ env.REMOTE_SSH_USER }}@${{ env.REMOTE_SSH_HOST }}" docker swarm init
         echo "Init docker swarm cluster ... Done !"
 
-    - name: Start Deployment 1
+    - name: Start Deployment 1 - Basic
       uses: ./
       with:
         deployment_mode: docker-swarm
@@ -100,3 +100,39 @@ jobs:
         ssh_public_key: "${{ env.SSH_KEY_PUBLIC_VALUE }}"
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx_1
+
+    - name: Start Deployment 2 - No pub key
+      uses: ./
+      with:
+        deployment_mode: docker-swarm
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
+        remote_docker_port: "${{ env.CONTAINER_SSH_PORT }}"
+        remote_docker_username: "${{ env.REMOTE_SSH_USER }}"
+        ssh_private_key: "${{ steps.deploy_ssh_key.outputs.ssh_key_private }}"
+        stack_file_path: ./tests/docker-compose.yml
+        stack_name: nginx_2
+
+    - name: Start Deployment 3 - Background deploy
+      uses: ./
+      with:
+        deployment_mode: docker-swarm
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
+        remote_docker_port: "${{ env.CONTAINER_SSH_PORT }}"
+        remote_docker_username: "${{ env.REMOTE_SSH_USER }}"
+        ssh_private_key: "${{ steps.deploy_ssh_key.outputs.ssh_key_private }}"
+        stack_file_path: ./tests/docker-compose.yml
+        stack_name: nginx_3
+        deploy_foreground: false
+
+    - name: Start Deployment 4 - Debug
+      uses: ./
+      with:
+        deployment_mode: docker-swarm
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
+        remote_docker_port: "${{ env.CONTAINER_SSH_PORT }}"
+        remote_docker_username: "${{ env.REMOTE_SSH_USER }}"
+        ssh_private_key: "${{ steps.deploy_ssh_key.outputs.ssh_key_private }}"
+        ssh_public_key: "${{ env.SSH_KEY_PUBLIC_VALUE }}"
+        stack_file_path: ./tests/docker-compose.yml
+        stack_name: nginx_4
+        debug: true
