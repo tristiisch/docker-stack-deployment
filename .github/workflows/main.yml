@@ -85,9 +85,9 @@ jobs:
             -p "${{ env.REMOTE_SSH_PORT }}" \
             "${{ env.REMOTE_SSH_USER }}@${{ env.REMOTE_SSH_HOST }}"
         echo "Copy public key into ssh server ... Done !"
-        echo "Test connnection ..."
-        ssh -i "${{ env.SSH_KEY_PATH }}" -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' -p "${{ env.REMOTE_SSH_PORT }}" "${{ env.REMOTE_SSH_USER }}@${{ env.REMOTE_SSH_HOST }}" exit
-        echo "Test connnection ... Done !"
+        echo "Init docker swarm cluster ..."
+        ssh -i "${{ env.SSH_KEY_PATH }}" -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' -p "${{ env.REMOTE_SSH_PORT }}" "${{ env.REMOTE_SSH_USER }}@${{ env.REMOTE_SSH_HOST }}" docker swarm init
+        echo "Init docker swarm cluster ... Done !"
 
     - name: Start Deployment 1
       uses: ./

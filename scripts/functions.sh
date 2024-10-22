@@ -72,8 +72,12 @@ EOF
 	debug "$SSH_CONFIG_PATH :" "$SSH_CONFIG"
 
 	info "Testing SSH connection ..."
-	ssh -v -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
-	# ssh -v -i "$KEY_PATH" -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
+	if is_debug; then
+		ssh -v -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
+	else
+		ssh -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
+		# ssh -v -i "$KEY_PATH" -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
+	fi
 	info "Done !"
 }
 
