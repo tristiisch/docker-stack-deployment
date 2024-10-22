@@ -64,18 +64,30 @@ jobs:
         echo "SSH_KEY_PUBLIC_VALUE=$(echo $PUBLIC_KEY | cut -d' ' -f2-)" >> $GITHUB_ENV
 
     - name: Generate an ssh-key & copy ssh-key in container
+      id: deploy_ssh_key
       run: |
         if [ -n ACT ]; then
+          echo "Install sshpass ..."
           sudo apt update
           sudo apt install -y sshpass
+          echo "Install sshpass ... Done !"
         fi
+        echo "Generate private key"
         ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PATH }}" -N "" -o -a 100
-        echo "SSH_KEY_PRIVATE=$(cat ${{ env.SSH_KEY_PATH }}.pub)" >> $GITHUB_ENV
+        EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+        echo "ssh_key_private<<$EOF" >> $GITHUB_OUTPUT
+        cat ${{ env.SSH_KEY_PATH }} >> $GITHUB_OUTPUT
+        echo "$EOF" >> $GITHUB_OUTPUT
+        echo "Copy public key into ssh server ..."
         sshpass -p "${{ env.REMOTE_SSH_PASSWORD }}" \
           ssh-copy-id -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
             -i "${{ env.SSH_KEY_PATH }}.pub" \
             -p "${{ env.REMOTE_SSH_PORT }}" \
             "${{ env.REMOTE_SSH_USER }}@${{ env.REMOTE_SSH_HOST }}"
+        echo "Copy public key into ssh server ... Done !"
+        echo "Test connnection ..."
+        ssh -i "${{ env.SSH_KEY_PATH }}" -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' -p "${{ env.REMOTE_SSH_PORT }}" "${{ env.REMOTE_SSH_USER }}@${{ env.REMOTE_SSH_HOST }}" exit
+        echo "Test connnection ... Done !"
 
     - name: Start Deployment 1
       uses: ./
@@ -83,8 +95,8 @@ jobs:
         deployment_mode: docker-swarm
         remote_docker_host: "${{ env.CONTAINER_NAME }}"
         remote_docker_port: "${{ env.CONTAINER_SSH_PORT }}"
-        remote_docker_username: ${{ env.REMOTE_SSH_USER }}
-        ssh_private_key: ${{ env.SSH_KEY_PRIVATE }}
-        ssh_public_key: ${{ env.SSH_KEY_PUBLIC_VALUE }}
+        remote_docker_username: "${{ env.REMOTE_SSH_USER }}"
+        ssh_private_key: "${{ steps.deploy_ssh_key.outputs.ssh_key_private }}"
+        ssh_public_key: "${{ env.SSH_KEY_PUBLIC_VALUE }}"
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx_1

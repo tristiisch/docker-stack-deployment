@@ -5,7 +5,7 @@ KEY_NAME="docker_key"
 SSH_FOLDER="$HOME/.ssh"
 SSH_CONFIG_PATH="/etc/ssh/ssh_config.d/docker_stack_deployement.conf"
 KEY_PATH="$SSH_FOLDER/$KEY_NAME"
-KNOWN_HOST_PATH=$SSH_FOLDER/known_hosts
+KNOWN_HOST_PATH="/etc/ssh/ssh_known_hosts"
 DOCKER_CONTEXT_NAME="docker-remote"
 
 setup_ssh() {
@@ -36,7 +36,6 @@ setup_ssh() {
 	fi
 
 	cat <<EOF >> "$SSH_CONFIG_PATH"
-Host $SSH_HOST:$SSH_PORT
 	IdentityFile $KEY_PATH
 	UserKnownHostsFile $KNOWN_HOST_PATH
 	ControlMaster auto
@@ -68,12 +67,13 @@ EOF
 		KNOWN_HOST=$(cat "$KNOWN_HOST_PATH")
 		debug "$KNOWN_HOST_PATH :" "$KNOWN_HOST"
 	fi
-	printf 'StrictHostKeyChecking %s\n' $STRICT_HOST >> "$SSH_CONFIG_PATH"
+	printf '	StrictHostKeyChecking %s\n' $STRICT_HOST >> "$SSH_CONFIG_PATH"
 	SSH_CONFIG=$(cat "$SSH_CONFIG_PATH")
 	debug "$SSH_CONFIG_PATH :" "$SSH_CONFIG"
 
 	info "Testing SSH connection ..."
-	ssh -v -i "$KEY_PATH" -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
+	ssh -v -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
+	# ssh -v -i "$KEY_PATH" -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
 	info "Done !"
 }
 
@@ -82,7 +82,8 @@ setup_remote_docker() {
 	if ! docker context inspect "$DOCKER_CONTEXT_NAME" >/dev/null 2>&1; then
 		info "Create docker context"
 		debug "Adding context host=ssh://$DOCKER_USER_HOST:$SSH_PORT"
-		docker context create "$DOCKER_CONTEXT_NAME" --docker "host=ssh://$DOCKER_USER_HOST:$SSH_PORT?identityfile=$KEY_PATH"
+		docker context create "$DOCKER_CONTEXT_NAME" --docker "host=ssh://$DOCKER_USER_HOST:$SSH_PORT"
+		# docker context create "$DOCKER_CONTEXT_NAME" --docker "host=ssh://$DOCKER_USER_HOST:$SSH_PORT,key=$KEY_PATH"
 	fi
 
 	current_context=$(docker context show)
