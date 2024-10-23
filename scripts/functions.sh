@@ -5,7 +5,7 @@ KEY_NAME="docker_key"
 SSH_FOLDER="$HOME/.ssh"
 SSH_CONFIG_PATH="/etc/ssh/ssh_config.d/docker_stack_deployement.conf"
 KEY_PATH="$SSH_FOLDER/$KEY_NAME"
-KNOWN_HOST_PATH="/etc/ssh/ssh_known_hosts"
+KNOWN_HOST_PATH=$SSH_FOLDER/known_hosts_$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
 DOCKER_CONTEXT_NAME="docker-remote"
 
 setup_ssh() {
@@ -75,7 +75,6 @@ EOF
 		ssh -v -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
 	else
 		ssh -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
-		# ssh -v -i "$KEY_PATH" -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
 	fi
 	info "Done !"
 }
@@ -86,7 +85,6 @@ setup_remote_docker() {
 		info "Create docker context"
 		debug "Adding context host=ssh://$DOCKER_USER_HOST:$SSH_PORT"
 		docker context create "$DOCKER_CONTEXT_NAME" --docker "host=ssh://$DOCKER_USER_HOST:$SSH_PORT"
-		# docker context create "$DOCKER_CONTEXT_NAME" --docker "host=ssh://$DOCKER_USER_HOST:$SSH_PORT,key=$KEY_PATH"
 	fi
 
 	current_context=$(docker context show)
