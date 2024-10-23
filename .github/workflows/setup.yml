@@ -42,10 +42,6 @@ jobs:
           --tmpfs /tmp
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
-
     - name: Wait for SSH server
       id: w8_for_sshd
       run: |

@@ -13,6 +13,9 @@ jobs:
   job1:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
     - uses: ./.github/workflows/setup.yml
     - name: Start Deployment 1 - Basic
       uses: ./
@@ -29,6 +32,9 @@ jobs:
   job2:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
     - uses: ./.github/workflows/setup.yml
     - name: Start Deployment 2 - No pub key
       uses: ./
@@ -44,6 +50,9 @@ jobs:
   job3:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
     - uses: ./.github/workflows/setup.yml
     - name: Start Deployment 3 - Background deploy
       uses: ./
@@ -61,6 +70,9 @@ jobs:
   job4:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
     - uses: ./.github/workflows/setup.yml
     - name: Start Deployment 4 - Debug
       uses: ./
