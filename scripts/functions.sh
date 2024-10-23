@@ -10,8 +10,7 @@ DOCKER_CONTEXT_NAME="docker-remote"
 
 setup_ssh() {
 	if [ -e "$KEY_PATH" ]; then
-		debug "SSH key setup already completed"
-		return 0
+		debug "SSH key setup already completed; it will be overwritten."
 	fi
 	SSH_HOST=$INPUT_REMOTE_DOCKER_HOST
 	SSH_PORT=$INPUT_REMOTE_DOCKER_PORT
@@ -35,7 +34,7 @@ setup_ssh() {
 		ls -l "$KEY_PATH"
 	fi
 
-	cat <<EOF >> "$SSH_CONFIG_PATH"
+	cat <<EOF > "$SSH_CONFIG_PATH"
 	IdentityFile $KEY_PATH
 	UserKnownHostsFile $KNOWN_HOST_PATH
 	ControlMaster auto
