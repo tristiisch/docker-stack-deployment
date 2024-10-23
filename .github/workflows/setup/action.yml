@@ -1,7 +1,5 @@
 name: Setup Deployment Environment
 description: Sets up the environment for deployment with SSH and Docker.
-inputs:
-
 runs:
 	setup:
 		runs-on: ubuntu-latest
