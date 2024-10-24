@@ -66,6 +66,8 @@ jobs:
     name: "Build service SSHD w/ Docker"
     needs: ["generate_key"]
     steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Docker image Build
         uses: docker/build-push-action@v6
         with:
@@ -76,7 +78,6 @@ jobs:
           cache-to: type=gha,mode=max
           push: false
           outputs: type=docker
-
       - name: Docker image Build
         uses: docker/build-push-action@v6
         with:
@@ -103,7 +104,7 @@ jobs:
 
   test_service:
     runs-on: ubuntu-latest
-    name: "Test service SSHD w/ Docker"
+    name: "Test SSHD service in DinD"
     needs: ["generate_key", "build_service"]
     outputs:
       ssh_server_public_key: ${{ steps.get_ssh_public_key.outputs.value }}
@@ -116,7 +117,7 @@ jobs:
       # - name: Load Docker image
       #   run: docker load -i "${{ env.IMAGE_FINAL_TAR_PATH }}"
 
-      - name: Start Docker container
+      - name: Start test Docker container
         run: |
           docker run
           --detach
@@ -134,26 +135,25 @@ jobs:
           --tmpfs /tmp
           "${{ env.IMAGE_FINAL_NAME }}:${{ github.sha }}"
 
-      - name: Check if SSH server is OPEN
+      - name: Verify SSH server availability at ${{ env.TEST_SSH_HOST }}:${{ env.TEST_SSH_PORT }}
         run: |
-          echo "Waiting for SSH server at ${{ env.TEST_SSH_HOST }}:${{ env.TEST_SSH_PORT }} ..."
           timeout 30 bash -c 'until nc -zv ${{ env.TEST_SSH_HOST }} ${{ env.TEST_SSH_PORT }}; do sleep 1; done'
           BANNER=$(echo QUIT | nc -w5 ${{ env.TEST_SSH_HOST }} ${{ env.TEST_SSH_PORT }} 2>/dev/null)
-          [[ $BANNER == SSH-* ]] && echo "SSH server is available: $BANNER" || (echo "No SSH server found" && exit 1)
+          [[ $BANNER == SSH-* ]] && echo "SSH server is available: $BANNER" || (echo "No SSH server found or invalid banner: $BANNER" && exit 1)
 
-      - name: Write private key into a file
+      - name: Save generated private SSH key to file
         run: |
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           cat << $EOF > ${{ env.SSH_KEY_PRIVATE_PATH }}
           ${{ needs.generate_key.outputs.private_key }}
           $EOF
 
-      - name: Test SSH Server
+      - name: Run SSH connection test and retrieve Docker info
         run: |
           ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' \
             -p "${{ env.TEST_SSH_PORT }}" "${{ env.SSH_ACCOUNT_NAME }}@${{ env.TEST_SSH_HOST }}" docker info
 
-      - name: Retrieve SSH server Public Key
+      - name: Extract SSH server public key
         id: get_ssh_public_key
         run: |
           PUBLIC_KEY=$(ssh-keyscan -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.TEST_SSH_PORT }} ${{ env.TEST_SSH_HOST }})
@@ -161,20 +161,23 @@ jobs:
           echo "Output :"
           echo $GITHUB_OUTPUT
 
-      - name: Write SSH server Public Key into a file
+      - name: Save SSH server public key to temporary known_hosts file
         run: |
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           cat << $EOF > /tmp/known_hosts_temp
           ${{ steps.get_ssh_public_key.outputs.value }}
           $EOF
 
-      - name: Test SSH Server with SSH server Public Key strict
+      - name: Run SSH test with strict host key checking
         run: |
           ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=/tmp/known_hosts_temp' -o 'StrictHostKeyChecking=strict' \
             -p "${{ env.TEST_SSH_PORT }}" "${{ env.SSH_ACCOUNT_NAME }}@${{ env.TEST_SSH_HOST }}" docker info
 
-      - name: Stop Docker container
+      - name: Stop test Docker container
         run: docker stop ${{ env.TEST_CONTAINER_NAME}}
+
+      - name: Remove test Docker container and associated volumes
+        run: docker rm -v ${{ env.TEST_CONTAINER_NAME}}
 
   job1:
     runs-on: ubuntu-latest
