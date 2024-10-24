@@ -33,19 +33,28 @@ jobs:
     runs-on: ubuntu-latest
     name: "Generate SSH Key"
     outputs:
-      public_key: ${{ steps.ssh_key.outputs.public }}
-      private_key: ${{ steps.ssh_key.outputs.private }}
+      public_key: ${{ steps.ssh_key_public.outputs.value }}
+      private_key: ${{ steps.ssh_key_private.outputs.value }}
     steps:
-      - name: Generate SSH Key
-        id: ssh_key
+      - name: Create folder for key
         run: |
-          echo "Generating private key..."
+          mkdir -p "$(dirname ${{ env.SSH_KEY_PRIVATE_PATH }})"
+      - name: Generate SSH Key
+        run: |
           ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PRIVATE_PATH }}" -N "" -o -a 100
-          echo "Private key generated."
+      - name: Output public key
+        id: ssh_key_public
+        run: |
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "public<<$EOF" >> $GITHUB_OUTPUT
+          echo "value<<$EOF" >> $GITHUB_OUTPUT
           cat ${{ env.SSH_KEY_PUBLIC_PATH }} >> $GITHUB_OUTPUT
           echo "$EOF" >> $GITHUB_OUTPUT
+          echo "Output :"
+          echo $GITHUB_OUTPUT
+      - name: Output private key
+        id: ssh_key_private
+        run: |
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           echo "private<<$EOF" >> $GITHUB_OUTPUT
           cat ${{ env.SSH_KEY_PRIVATE_PATH }} >> $GITHUB_OUTPUT
           echo "$EOF" >> $GITHUB_OUTPUT
