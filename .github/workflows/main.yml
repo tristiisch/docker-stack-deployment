@@ -38,8 +38,8 @@ jobs:
       - name: Create directory for SSH key
         id: short_sha
         run: |
-          SHORT_SHA="${${{ github.sha }}:0:7}"
-          cat "value=$SHORT_SHA" >> $GITHUB_OUTPUT
+          SHORT_SHA=${${{ github.sha }}:0:7}
+          echo "value=$SHORT_SHA" >> $GITHUB_OUTPUT
           echo "Output :"
           cat $GITHUB_OUTPUT
 
