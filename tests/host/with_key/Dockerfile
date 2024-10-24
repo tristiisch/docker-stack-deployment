@@ -1,7 +1,7 @@
 
 ARG BASE_TAG=latest
 
-FROM docker_throw_ssh:${BASE_TAG}
+FROM ghcr.io/tristiisch/docker_throw_ssh:${BASE_TAG}
 ARG SSH_PUBLIC_KEY
 ARG SSH_PRIVATE_ACCOUNT=deploy
 
