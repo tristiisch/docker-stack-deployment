@@ -35,11 +35,11 @@ jobs:
     outputs:
       short_sha: ${{ steps.short_sha.outputs.value }}
     steps:
-      - name: Create directory for SSH key
+      - name: Retrieve short SHA
         id: short_sha
         run: |
           SHA="${{ github.sha }}"
-          SHORT_SHA="${SHA:0:7}""
+          SHORT_SHA="${SHA:0:7}"
           echo "value=$SHORT_SHA" >> $GITHUB_OUTPUT
           echo "Output :"
           cat $GITHUB_OUTPUT
