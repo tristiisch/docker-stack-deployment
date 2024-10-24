@@ -205,7 +205,7 @@ jobs:
       - name: Retrieve container IP
         id: container_ip
         run: |
-          IP=docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+          IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
           echo "value=$IP" >> $GITHUB_OUTPUT
 
       - name: Verify SSH server availability at ${{ steps.container_ip.outputs.value }}:${{ env.TEST_SSH_PORT }}
