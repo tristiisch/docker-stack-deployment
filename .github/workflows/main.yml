@@ -85,6 +85,9 @@ jobs:
           push: false
           outputs: type=docker
 
+      - name: Retrive available local images
+        run: docker images
+
       - name: Build final Docker image for SSHD service in DinD
         uses: docker/build-push-action@v6
         with:
