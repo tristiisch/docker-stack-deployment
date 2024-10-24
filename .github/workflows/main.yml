@@ -10,20 +10,22 @@ on:
       - "*"
 
 env:
-  IMAGE_BASE_PATH: "./tests/host/Dockerfile"
-  IMAGE_BASE_NAME: "ghcr.io/tristiisch/docker_throw_ssh"
-  IMAGE_FINAL_PATH: "./tests/host/with_key/Dockerfile"
-  IMAGE_FINAL_CONTEXT: "./tests/host/with_key"
-  IMAGE_FINAL_NAME: "ghcr.io/tristiisch/docker_throw_ssh_with_key"
-  IMAGE_FINAL_TAR: "docker_throw_ssh_with_key.tar"
-  IMAGE_FINAL_TAR_PATH: "./docker_throw_ssh_with_key.tar"
-  IMAGE_FINAL_ARTIFACT_NAME: "docker-throw-ssh"
   SSH_KEY_TYPE: "ed25519"
   SSH_KEY_PRIVATE_PATH: "/tmp/ssh/id_ed25519"
   SSH_KEY_PUBLIC_PATH: "/tmp/ssh/id_ed25519.pub"
   SSH_USERNAME: "deploy"
+  IMAGE_BASE_PATH: "./tests/host/Dockerfile"
+  IMAGE_BASE_NAME: "ghcr.io/tristiisch/docker_throw_ssh"
+  IMAGE_TEST_PATH: "./tests/host/with_key/Dockerfile"
+  IMAGE_TEST_CONTEXT: "./tests/host/with_key"
+  IMAGE_TEST_NAME: "ghcr.io/tristiisch/docker_throw_ssh_with_key"
+  IMAGE_TEST_TAR: "docker_throw_ssh_with_key.tar"
+  IMAGE_TEST_TAR_PATH: "./docker_throw_ssh_with_key.tar"
+  IMAGE_TEST_ARTIFACT_NAME: "docker-throw-ssh"
   CONTAINER_NAME: "docker-throw-ssh"
   CONTAINER_PORT: "22"
+  CONTAINER_HOST_NAME: "localhost"
+  CONTAINER_HOST_PORT: "2222"
 
 jobs:
 
@@ -136,7 +138,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_FINAL_NAME }}
+          images: ${{ env.IMAGE_TEST_NAME }}
           tags: |
             type=sha,priority=100,prefix=test-,suffix=,format=short
             type=raw,value=latest,enable={{is_default_branch}}
@@ -144,8 +146,8 @@ jobs:
       - name: Build test Docker image for SSHD service in DinD
         uses: docker/build-push-action@v6
         with:
-          file: ${{ env.IMAGE_FINAL_PATH }}
-          context: ${{ env.IMAGE_FINAL_CONTEXT }}
+          file: ${{ env.IMAGE_TEST_PATH }}
+          context: ${{ env.IMAGE_TEST_CONTEXT }}
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -179,11 +181,28 @@ jobs:
           --tmpfs /tmp
     steps:
 
-      - name: Verify SSH server availability at ${{ env.CONTAINER_NAME}}:${{ env.CONTAINER_PORT }}
+      - name: Verify SSH server availability at ${{ env.CONTAINER_HOST_NAME}}:${{ env.CONTAINER_HOST_PORT }}
         run: |
-          timeout 30 bash -c 'until nc -zv ${{ env.CONTAINER_NAME}} ${{ env.CONTAINER_PORT }}; do sleep 1; done'
-          BANNER=$(echo QUIT | nc -w5 ${{ env.CONTAINER_NAME}} ${{ env.CONTAINER_PORT }} 2>/dev/null)
-          [[ $BANNER == SSH-* ]] && echo "SSH server is available: $BANNER" || (echo "No SSH server found or invalid banner: $BANNER" && exit 1)
+          START_TIME=$(date +%s)
+          TIMEOUT=30
+          END_TIME=$((START_TIME + TIMEOUT))
+      
+          while [[ $(date +%s) -lt $END_TIME ]]; do
+            if nc -zv ${{ env.CONTAINER_HOST_NAME }} ${{ env.CONTAINER_HOST_PORT }}; then
+              BANNER=$(echo QUIT | nc -w5 ${{ env.CONTAINER_HOST_NAME }} ${{ env.CONTAINER_HOST_PORT }} 2>/dev/null)
+              if [[ $BANNER == SSH-* ]]; then
+                echo "SSH server is available: $BANNER"
+                exit 0
+              else
+                echo "No SSH server found or invalid banner: $BANNER"
+              fi
+            else
+              echo "SSH server is not available yet."
+            fi
+            sleep 1
+          done
+          echo "Timeout: SSH server did not respond in 30 seconds."
+          exit 1
 
       - name: Create directory for SSH key
         run: |
@@ -199,12 +218,12 @@ jobs:
       - name: Run SSH connection test and retrieve Docker info
         run: |
           ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' \
-            -p "${{ env.CONTAINER_PORT }}" "${{ env.SSH_USERNAME }}@${{ env.CONTAINER_NAME}}" docker info
+            -p "${{ env.CONTAINER_HOST_PORT }}" "${{ env.SSH_USERNAME }}@${{ env.CONTAINER_HOST_NAME}}" docker info
 
       - name: Extract SSH server public key
         id: get_ssh_public_key
         run: |
-          PUBLIC_KEY=$(ssh-keyscan -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.CONTAINER_PORT }} ${{ env.CONTAINER_NAME}})
+          PUBLIC_KEY=$(ssh-keyscan -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.CONTAINER_HOST_PORT }} ${{ env.CONTAINER_HOST_NAME}})
           echo "value=$(echo $PUBLIC_KEY | cut -d' ' -f2-)" >> $GITHUB_OUTPUT
           echo "Output :"
           cat $GITHUB_OUTPUT
@@ -219,13 +238,7 @@ jobs:
       - name: Run SSH test with strict host key checking
         run: |
           ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=/tmp/known_hosts_temp' -o 'StrictHostKeyChecking=strict' \
-            -p "${{ env.CONTAINER_PORT }}" "${{ env.SSH_USERNAME }}@${{ env.CONTAINER_NAME}}" docker info
-
-      - name: Stop test Docker container
-        run: docker stop ${{ env.CONTAINER_NAME}}
-
-      - name: Remove test Docker container and associated volumes
-        run: docker rm -v ${{ env.CONTAINER_NAME}}
+            -p "${{ env.CONTAINER_HOST_PORT }}" "${{ env.SSH_USERNAME }}@${{ env.CONTAINER_NAME}}" docker info
 
   test1:
     runs-on: ubuntu-latest
@@ -256,7 +269,7 @@ jobs:
       uses: ./
       with:
         deployment_mode: docker-swarm
-        remote_docker_host: "docker-throw-ssh"
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
         remote_docker_port: "${{ env.CONTAINER_PORT }}"
         remote_docker_username: "${{ env.SSH_USERNAME }}"
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
@@ -293,7 +306,7 @@ jobs:
       uses: ./
       with:
         deployment_mode: docker-swarm
-        remote_docker_host: "docker-throw-ssh"
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
         remote_docker_port: "${{ env.CONTAINER_PORT }}"
         remote_docker_username: "${{ env.SSH_USERNAME }}"
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
@@ -329,7 +342,7 @@ jobs:
       uses: ./
       with:
         deployment_mode: docker-swarm
-        remote_docker_host: "docker-throw-ssh"
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
         remote_docker_port: "${{ env.CONTAINER_PORT }}"
         remote_docker_username: "${{ env.SSH_USERNAME }}"
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
@@ -367,7 +380,7 @@ jobs:
       uses: ./
       with:
         deployment_mode: docker-swarm
-        remote_docker_host: "docker-throw-ssh"
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
         remote_docker_port: "${{ env.CONTAINER_PORT }}"
         remote_docker_username: "${{ env.SSH_USERNAME }}"
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
