@@ -1,0 +1,18 @@
+FROM docker_throw_ssh:latest
+ARG SSH_PUBLIC_KEY
+ARG SSH_PRIVATE_ACCOUNT=deploy
+
+RUN test -n "$SSH_PUBLIC_KEY" || (echo "Error: SSH_PUBLIC_KEY is not set" && exit 1)
+
+# ---------- SSH Account
+RUN useradd -m $SSH_PRIVATE_ACCOUNT \
+	&& usermod -aG docker $SSH_PRIVATE_ACCOUNT \
+	&& chmod 700 -R /home/$SSH_PRIVATE_ACCOUNT \
+    && mkdir -p /home/$SSH_PRIVATE_ACCOUNT/.ssh \
+    && chmod 700 /home/$SSH_PRIVATE_ACCOUNT/.ssh \
+    && echo "$SSH_PUBLIC_KEY" > /home/$SSH_PRIVATE_ACCOUNT/.ssh/authorized_keys \
+    && chmod 600 /home/$SSH_PRIVATE_ACCOUNT/.ssh/authorized_keys
+
+COPY ./docker-swarm-init.service /etc/systemd/system/docker-swarm-init.service
+# RUN touch /etc/docker/swarm_initialized
+RUN ln -s /etc/systemd/system/docker-swarm-init.service /etc/systemd/system/multi-user.target.wants/docker-swarm-init.service
