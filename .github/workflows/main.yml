@@ -29,6 +29,20 @@ env:
 
 jobs:
 
+  utils:
+    runs-on: ubuntu-latest
+    name: "Utils"
+    outputs:
+      short_sha: ${{ steps.short_sha.outputs.value }}
+    steps:
+      - name: Create directory for SSH key
+        id: short_sha
+        run: |
+          SHORT_SHA="${${{ github.sha }}:0:7}"
+          cat "value=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "Output :"
+          cat $GITHUB_OUTPUT
+
   generate_key:
     runs-on: ubuntu-latest
     name: "Generate SSH Key"
@@ -102,7 +116,7 @@ jobs:
   build_run_test_service:
     runs-on: ubuntu-latest
     name: "Build test service"
-    needs: ["generate_key", "build_base_service"]
+    needs: ["utils", "generate_key", "build_base_service"]
     steps:
 
       - uses: actions/checkout@v4
@@ -137,7 +151,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            BASE_TAG=test-${{ github.sha }}
+            BASE_TAG=test-${{ needs.utils.outputs.short_sha }}
             SSH_ACCOUNT=${{ env.SSH_ACCOUNT_NAME }}
             SSH_PUBLIC_KEY=${{ needs.generate_key.outputs.public_key }}
           push: true
@@ -156,7 +170,7 @@ jobs:
 
   run_test_service:
     runs-on: ubuntu-latest
-    name: "Test SSHD service in DinD"
+    name: "Test service"
     needs: ["generate_key", "build_run_test_service"]
     outputs:
       ssh_server_public_key: ${{ steps.get_ssh_public_key.outputs.value }}
@@ -231,12 +245,13 @@ jobs:
       - name: Remove test Docker container and associated volumes
         run: docker rm -v ${{ env.TEST_CONTAINER_NAME}}
 
-  job1:
+  test1:
     runs-on: ubuntu-latest
-    needs: ["generate_key", "build_run_test_service", "run_test_service"]
+    name: "Basic"
+    needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
       docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh:${{ github.sha }}"
+        image: "ghcr.io/tristiisch/docker_throw_ssh:test-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -267,12 +282,13 @@ jobs:
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx_1
 
-  job2:
+  test2:
     runs-on: ubuntu-latest
-    needs: ["generate_key", "build_run_test_service", "run_test_service"]
+    name: "No pub key"
+    needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
       docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh:${{ github.sha }}"
+        image: "ghcr.io/tristiisch/docker_throw_ssh:test-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -302,12 +318,13 @@ jobs:
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx_2
 
-  job3:
+  test3:
     runs-on: ubuntu-latest
-    needs: ["generate_key", "build_run_test_service", "run_test_service"]
+    name: "Background deploy"
+    needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
       docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh:${{ github.sha }}"
+        image: "ghcr.io/tristiisch/docker_throw_ssh:test-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -339,12 +356,13 @@ jobs:
         stack_name: nginx_3
         deploy_foreground: false
 
-  job4:
+  test4:
     runs-on: ubuntu-latest
-    needs: ["generate_key", "build_run_test_service", "run_test_service"]
+    name: "Debug"
+    needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
       docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh:${{ github.sha }}"
+        image: "ghcr.io/tristiisch/docker_throw_ssh:test-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
