@@ -202,10 +202,16 @@ jobs:
           --tmpfs /tmp \
           "${{ env.IMAGE_FINAL_NAME }}:test-${{ needs.utils.outputs.short_sha }}"
 
-      - name: Verify SSH server availability at ${{ env.TEST_SSH_HOST }}:${{ env.TEST_SSH_PORT }}
+      - name: Retrieve container IP
+        id: container_ip
         run: |
-          timeout 30 bash -c 'until nc -zv ${{ env.TEST_SSH_HOST }} ${{ env.TEST_SSH_PORT }}; do sleep 1; done'
-          BANNER=$(echo QUIT | nc -w5 ${{ env.TEST_SSH_HOST }} ${{ env.TEST_SSH_PORT }} 2>/dev/null)
+          IP=docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+          echo "value=$IP" >> $GITHUB_OUTPUT
+
+      - name: Verify SSH server availability at ${{ steps.container_ip.outputs.value }}:${{ env.TEST_SSH_PORT }}
+        run: |
+          timeout 30 bash -c 'until nc -zv ${{ steps.container_ip.outputs.value }} ${{ env.TEST_SSH_PORT }}; do sleep 1; done'
+          BANNER=$(echo QUIT | nc -w5 ${{ steps.container_ip.outputs.value }} ${{ env.TEST_SSH_PORT }} 2>/dev/null)
           [[ $BANNER == SSH-* ]] && echo "SSH server is available: $BANNER" || (echo "No SSH server found or invalid banner: $BANNER" && exit 1)
 
       - name: Save generated private SSH key to file
@@ -218,12 +224,12 @@ jobs:
       - name: Run SSH connection test and retrieve Docker info
         run: |
           ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' \
-            -p "${{ env.TEST_SSH_PORT }}" "${{ env.SSH_ACCOUNT_NAME }}@${{ env.TEST_SSH_HOST }}" docker info
+            -p "${{ env.TEST_SSH_PORT }}" "${{ env.SSH_ACCOUNT_NAME }}@${{ steps.container_ip.outputs.value }}" docker info
 
       - name: Extract SSH server public key
         id: get_ssh_public_key
         run: |
-          PUBLIC_KEY=$(ssh-keyscan -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.TEST_SSH_PORT }} ${{ env.TEST_SSH_HOST }})
+          PUBLIC_KEY=$(ssh-keyscan -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.TEST_SSH_PORT }} ${{ steps.container_ip.outputs.value }})
           echo "value=$(echo $PUBLIC_KEY | cut -d' ' -f2-)" >> $GITHUB_OUTPUT
           echo "Output :"
           cat $GITHUB_OUTPUT
@@ -238,7 +244,7 @@ jobs:
       - name: Run SSH test with strict host key checking
         run: |
           ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=/tmp/known_hosts_temp' -o 'StrictHostKeyChecking=strict' \
-            -p "${{ env.TEST_SSH_PORT }}" "${{ env.SSH_ACCOUNT_NAME }}@${{ env.TEST_SSH_HOST }}" docker info
+            -p "${{ env.TEST_SSH_PORT }}" "${{ env.SSH_ACCOUNT_NAME }}@${{ steps.container_ip.outputs.value }}" docker info
 
       - name: Stop test Docker container
         run: docker stop ${{ env.TEST_CONTAINER_NAME}}
