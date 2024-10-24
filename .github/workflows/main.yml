@@ -50,7 +50,7 @@ jobs:
           cat ${{ env.SSH_KEY_PUBLIC_PATH }} >> $GITHUB_OUTPUT
           echo "$EOF" >> $GITHUB_OUTPUT
           echo "Output :"
-          echo $GITHUB_OUTPUT
+          cat $GITHUB_OUTPUT
       - name: Retrieve private key
         id: ssh_key_private
         run: |
@@ -59,7 +59,7 @@ jobs:
           cat ${{ env.SSH_KEY_PRIVATE_PATH }} >> $GITHUB_OUTPUT
           echo "$EOF" >> $GITHUB_OUTPUT
           echo "Output :"
-          echo $GITHUB_OUTPUT
+          cat $GITHUB_OUTPUT
 
   build_service:
     runs-on: ubuntu-latest
@@ -78,7 +78,7 @@ jobs:
           images: ${{ env.IMAGE_BASE_NAME }}
           tags: |
             type=sha,priority=100,prefix=test-,suffix=,format=short
-            type=latest,onbranch=main
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -180,7 +180,7 @@ jobs:
           PUBLIC_KEY=$(ssh-keyscan -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.TEST_SSH_PORT }} ${{ env.TEST_SSH_HOST }})
           echo "value=$(echo $PUBLIC_KEY | cut -d' ' -f2-)" >> $GITHUB_OUTPUT
           echo "Output :"
-          echo $GITHUB_OUTPUT
+          cat $GITHUB_OUTPUT
 
       - name: Save SSH server public key to temporary known_hosts file
         run: |
