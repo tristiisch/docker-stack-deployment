@@ -212,6 +212,10 @@ jobs:
           BANNER=$(echo QUIT | nc -w5 ${{ steps.container_ip.outputs.value }} ${{ env.CONTAINER_PORT }} 2>/dev/null)
           [[ $BANNER == SSH-* ]] && echo "SSH server is available: $BANNER" || (echo "No SSH server found or invalid banner: $BANNER" && exit 1)
 
+      - name: Create directory for SSH key
+        run: |
+          mkdir -p "$(dirname ${{ env.SSH_KEY_PRIVATE_PATH }})"
+
       - name: Save generated private SSH key to file
         run: |
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
