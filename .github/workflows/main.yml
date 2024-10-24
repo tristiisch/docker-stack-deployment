@@ -172,7 +172,7 @@ jobs:
   run_test_service:
     runs-on: ubuntu-latest
     name: "Test service"
-    needs: ["generate_key", "build_run_test_service"]
+    needs: ["utils", "generate_key", "build_run_test_service"]
     outputs:
       ssh_server_public_key: ${{ steps.get_ssh_public_key.outputs.value }}
     steps:
@@ -186,21 +186,21 @@ jobs:
 
       - name: Start test Docker container
         run: |
-          docker run
-          --detach
-          -p 2222:22
-          --name ${{ env.TEST_CONTAINER_NAME}}
-          --privileged
-          --tty
-          -v /sys/fs/cgroup:/sys/fs/cgroup
-          --cgroupns=host
-          --cap-add=NET_ADMIN
-          --cap-add=NET_RAW
-          --cap-add=SYS_ADMIN
-          --tmpfs /run
-          --tmpfs /run/lock
-          --tmpfs /tmp
-          "${{ env.IMAGE_FINAL_NAME }}:${{ github.sha }}"
+          docker run \
+          --detach \
+          -p 2222:22 \
+          --name ${{ env.TEST_CONTAINER_NAME}} \
+          --privileged \
+          --tty \
+          -v /sys/fs/cgroup:/sys/fs/cgroup \
+          --cgroupns=host \
+          --cap-add=NET_ADMIN \
+          --cap-add=NET_RAW \
+          --cap-add=SYS_ADMIN \
+          --tmpfs /run \
+          --tmpfs /run/lock \
+          --tmpfs /tmp \
+          "${{ env.IMAGE_FINAL_NAME }}:test-${{ needs.utils.outputs.short_sha }}"
 
       - name: Verify SSH server availability at ${{ env.TEST_SSH_HOST }}:${{ env.TEST_SSH_PORT }}
         run: |
