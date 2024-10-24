@@ -100,6 +100,7 @@ jobs:
             SSH_ACCOUNT=${{ env.SSH_ACCOUNT_NAME }}
             SSH_PUBLIC_KEY=${{ needs.generate_key.outputs.public_key }}
           push: true
+          load: true
 
       # - name: Export image
       #   run: docker save "${{ env.IMAGE_FINAL_NAME }}:${{ github.sha }}" -o "${{ env.IMAGE_FINAL_TAR_PATH }}"
