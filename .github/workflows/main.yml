@@ -189,6 +189,8 @@ jobs:
           TIMEOUT=30
           END_TIME=$((START_TIME + TIMEOUT))
       
+          timeout "$TIMEOUT" bash -c 'until nc -zv ${{ env.CONTAINER_HOST_NAME}} ${{ env.CONTAINER_HOST_PORT }}; do sleep 1; done'
+
           while [[ $(date +%s) -lt $END_TIME ]]; do
             if nc -zv ${{ env.CONTAINER_HOST_NAME }} ${{ env.CONTAINER_HOST_PORT }}; then
               BANNER=$(echo QUIT | nc -w5 ${{ env.CONTAINER_HOST_NAME }} ${{ env.CONTAINER_HOST_PORT }} 2>/dev/null)
@@ -219,6 +221,8 @@ jobs:
           ${{ needs.generate_key.outputs.private_key }}
           $EOF
           chmod 600 "${{ env.SSH_KEY_PRIVATE_PATH }}"
+          echo "Private key is :"
+          cat ${{ env.SSH_KEY_PRIVATE_PATH }}
 
       - name: Run SSH connection test and retrieve Docker info
         run: |
@@ -240,6 +244,8 @@ jobs:
           ${{ steps.get_ssh_public_key.outputs.value }}
           $EOF
           chmod 644 /tmp/known_hosts_temp
+          echo "Known_hosts is :"
+          cat ${{ env.SSH_KEY_PRIVATE_PATH }}
 
       - name: Run SSH test with strict host key checking
         run: |
