@@ -14,7 +14,7 @@ RUN \
 	rm -rf /lib/systemd/system/sockets.target.wants/*udev* && \
 	rm -rf /lib/systemd/system/sockets.target.wants/*initctl* && \
 	rm -rf /lib/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup* && \
-	rm -rf /lib/systemd/system/systemd-update-utmp* \
+	rm -rf /lib/systemd/system/systemd-update-utmp* && \
 	apt update && \
 	# Install systemd, ssh server and tools to install Docker's APT repository
     apt install -y --no-install-recommends \
