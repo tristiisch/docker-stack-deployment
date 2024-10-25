@@ -6,7 +6,17 @@ LABEL org.opencontainers.image.source=https://github.com/tristiisch/docker-stack
 ENV container=docker
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt update && \
+RUN \
+	# Remove unnecessary systemd files
+	rm -rf /lib/systemd/system/multi-user.target.wants/* && \
+	rm -rf /etc/systemd/system/*.wants/* && \
+	rm -rf /lib/systemd/system/local-fs.target.wants/* && \
+	rm -rf /lib/systemd/system/sockets.target.wants/*udev* && \
+	rm -rf /lib/systemd/system/sockets.target.wants/*initctl* && \
+	rm -rf /lib/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup* && \
+	rm -rf /lib/systemd/system/systemd-update-utmp* \
+	apt update && \
+	# Install systemd, ssh server and tools to install Docker's APT repository
     apt install -y --no-install-recommends \
         systemd \
         systemd-sysv \
@@ -17,16 +27,8 @@ RUN apt update && \
         lsb-release \
         software-properties-common \
         openssh-server && \
-    # Clean up
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
-    # Remove unnecessary systemd files
-    rm -rf /lib/systemd/system/multi-user.target.wants/* && \
-    rm -rf /etc/systemd/system/*.wants/* && \
-    rm -rf /lib/systemd/system/local-fs.target.wants/* && \
-    rm -rf /lib/systemd/system/sockets.target.wants/*udev* && \
-    rm -rf /lib/systemd/system/sockets.target.wants/*initctl* && \
-    rm -rf /lib/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup* && \
-    rm -rf /lib/systemd/system/systemd-update-utmp*
+	# Clean up
+	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Setup Docker's APT repository and install Docker
 RUN install -m 0755 -d /etc/apt/keyrings && \
