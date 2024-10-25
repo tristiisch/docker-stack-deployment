@@ -1,43 +1,402 @@
-name: Example usage
+name: Deployement Tests
 
 on:
   push:
     branches:
-      - master
+      - "*"
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - "*"
+
+env:
+  SSH_KEY_TYPE: "ed25519"
+  SSH_KEY_PRIVATE_PATH: "/tmp/ssh/id_ed25519"
+  SSH_KEY_PUBLIC_PATH: "/tmp/ssh/id_ed25519.pub"
+  S: "/tmp/ssh/known_host"
+  SSH_USERNAME: "deploy"
+  IMAGE_BASE_PATH: "./tests/host/Dockerfile"
+  IMAGE_BASE_NAME: "ghcr.io/tristiisch/docker_throw_ssh"
+  IMAGE_TEST_PATH: "./tests/host/with_key/Dockerfile"
+  IMAGE_TEST_CONTEXT: "./tests/host/with_key"
+  IMAGE_TEST_NAME: "ghcr.io/tristiisch/docker_throw_ssh_with_key"
+  IMAGE_TEST_TAR: "docker_throw_ssh_with_key.tar"
+  IMAGE_TEST_TAR_PATH: "./docker_throw_ssh_with_key.tar"
+  IMAGE_TEST_ARTIFACT_NAME: "docker-throw-ssh"
+  CONTAINER_NAME: "docker-throw-ssh"
+  CONTAINER_PORT: "22"
+  CONTAINER_HOST_NAME: "localhost"
+  CONTAINER_HOST_PORT: "2222"
 
 jobs:
-  build:
 
+  utils:
     runs-on: ubuntu-latest
-
+    name: "Utils"
+    outputs:
+      short_sha: ${{ steps.short_sha.outputs.value }}
     steps:
-    - uses: actions/checkout@v1
+      - name: Retrieve short SHA
+        id: short_sha
+        run: |
+          SHA="${{ github.sha }}"
+          SHORT_SHA="${SHA:0:7}"
+          echo "value=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "Output :"
+          cat $GITHUB_OUTPUT
+
+  generate_key:
+    runs-on: ubuntu-latest
+    name: "Generate SSH Key"
+    outputs:
+      public_key: ${{ steps.ssh_key_public.outputs.value }}
+      private_key: ${{ steps.ssh_key_private.outputs.value }}
+    steps:
+      - name: Create directory for SSH key
+        run: |
+          DIR_PATH=$(dirname ${{ env.SSH_KEY_PRIVATE_PATH }})
+          mkdir -p "$DIR_PATH"
+          chmod 700 "$DIR_PATH"
+      - name: Generate SSH key pair
+        run: |
+          ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PRIVATE_PATH }}" -N "" -o -a 100
+      - name: Retrieve public key
+        id: ssh_key_public
+        run: |
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "value<<$EOF" >> $GITHUB_OUTPUT
+          cat ${{ env.SSH_KEY_PUBLIC_PATH }} >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+          echo "Output :"
+          cat $GITHUB_OUTPUT
+      - name: Retrieve private key
+        id: ssh_key_private
+        run: |
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "value<<$EOF" >> $GITHUB_OUTPUT
+          cat ${{ env.SSH_KEY_PRIVATE_PATH }} >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+          echo "Output :"
+          cat $GITHUB_OUTPUT
+
+  build_base_service:
+    runs-on: ubuntu-latest
+    name: "Build base service"
+    steps:
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_BASE_NAME }}
+          tags: |
+            type=sha,priority=100,prefix=test-,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build initial Docker image for SSHD service in DinD
+        uses: docker/build-push-action@v6
+        with:
+          file: ${{ env.IMAGE_BASE_PATH }}
+          context: .
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          push: true
+
+  build_run_test_service:
+    runs-on: ubuntu-latest
+    name: "Build test service"
+    needs: ["utils", "generate_key", "build_base_service"]
+    steps:
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_TEST_NAME }}
+          tags: |
+            type=sha,priority=100,prefix=test-,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build test Docker image for SSHD service in DinD
+        uses: docker/build-push-action@v6
+        with:
+          file: ${{ env.IMAGE_TEST_PATH }}
+          context: ${{ env.IMAGE_TEST_CONTEXT }}
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BASE_TAG=test-${{ needs.utils.outputs.short_sha }}
+            SSH_ACCOUNT=${{ env.SSH_USERNAME }}
+            SSH_PUBLIC_KEY=${{ needs.generate_key.outputs.public_key }}
+          push: true
+
+  run_test_service:
+    runs-on: ubuntu-latest
+    name: "Test service"
+    needs: ["utils", "generate_key", "build_run_test_service"]
+    outputs:
+      ssh_server_public_key: ${{ steps.get_ssh_public_key.outputs.value }}
+    services:
+      docker-throw-ssh:
+        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+        ports:
+          - 2222:22
+        options: >
+          --privileged
+          --tty
+          -v /sys/fs/cgroup:/sys/fs/cgroup
+          --cgroupns=host
+          --cap-add=NET_ADMIN
+          --cap-add=NET_RAW
+          --cap-add=SYS_ADMIN
+          --tmpfs /run
+          --tmpfs /run/lock
+          --tmpfs /tmp
+    steps:
+
+      - name: Verify SSH server availability at ${{ env.CONTAINER_HOST_NAME}}:${{ env.CONTAINER_HOST_PORT }}
+        run: |
+          START_TIME=$(date +%s)
+          TIMEOUT=30
+          END_TIME=$((START_TIME + TIMEOUT))
+      
+          timeout "$TIMEOUT" bash -c 'until nc -zv ${{ env.CONTAINER_HOST_NAME}} ${{ env.CONTAINER_HOST_PORT }}; do sleep 1; done'
+
+          while [[ $(date +%s) -lt $END_TIME ]]; do
+            if nc -zv ${{ env.CONTAINER_HOST_NAME }} ${{ env.CONTAINER_HOST_PORT }}; then
+              BANNER=$(echo QUIT | nc -w5 ${{ env.CONTAINER_HOST_NAME }} ${{ env.CONTAINER_HOST_PORT }} 2>/dev/null)
+              if [[ $BANNER == SSH-* ]]; then
+                echo "SSH server is available: $BANNER"
+                exit 0
+              else
+                echo "No SSH server found or invalid banner: $BANNER"
+              fi
+            else
+              echo "SSH server is not available yet."
+            fi
+            sleep 1
+          done
+          echo "Timeout: SSH server did not respond in 30 seconds."
+          exit 1
+
+      - name: Create directory for SSH key
+        run: |
+          DIR_PATH=$(dirname ${{ env.SSH_KEY_PRIVATE_PATH }})
+          mkdir -p "$DIR_PATH"
+          chmod 700 "$DIR_PATH"
+          DIR_PATH=$(dirname ${{ env.S }})
+          mkdir -p "$DIR_PATH"
+          chmod 700 "$DIR_PATH"
+
+      - name: Save generated private SSH key to file
+        run: |
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          cat << $EOF > ${{ env.SSH_KEY_PRIVATE_PATH }}
+          ${{ needs.generate_key.outputs.private_key }}
+          $EOF
+          chmod 600 "${{ env.SSH_KEY_PRIVATE_PATH }}"
+          echo "Private key is :"
+          cat ${{ env.SSH_KEY_PRIVATE_PATH }}
+
+      - name: Run SSH connection test and retrieve Docker info
+        run: |
+          ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=/dev/null' -o 'StrictHostKeyChecking=no' \
+            -p "${{ env.CONTAINER_HOST_PORT }}" "${{ env.SSH_USERNAME }}@${{ env.CONTAINER_HOST_NAME}}" docker info
+
+      - name: Extract SSH server public key
+        id: get_ssh_public_key
+        run: |
+          PUBLIC_KEY=$(ssh-keyscan -t ${{ env.SSH_KEY_TYPE }} -p ${{ env.CONTAINER_HOST_PORT }} ${{ env.CONTAINER_HOST_NAME}})
+          echo "value=$(echo $PUBLIC_KEY | cut -d' ' -f2-)" >> $GITHUB_OUTPUT
+          echo "Output :"
+          cat $GITHUB_OUTPUT
+
+      - name: Save SSH server public key to temporary known_hosts file
+        run: |
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          cat << $EOF > ${{ env.S }}
+          [${{ env.CONTAINER_HOST_NAME}}]:${{ env.CONTAINER_HOST_PORT }} ${{ steps.get_ssh_public_key.outputs.value }}
+          $EOF
+          chmod 644 ${{ env.S }}
+          echo "Known hosts is :"
+          cat ${{ env.S }}
+
+      - name: Run SSH test with strict host key checking
+        run: |
+          ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=${{ env.S }}' -o 'StrictHostKeyChecking=yes' \
+            -p "${{ env.CONTAINER_HOST_PORT }}" "${{ env.SSH_USERNAME }}@${{ env.CONTAINER_HOST_NAME}}" docker info
+
+  test1:
+    runs-on: ubuntu-latest
+    name: "Basic"
+    needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
+    services:
+      docker-throw-ssh:
+        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+        ports:
+          - 2222:22
+        options: >
+          --privileged
+          --tty
+          -v /sys/fs/cgroup:/sys/fs/cgroup
+          --cgroupns=host
+          --cap-add=NET_ADMIN
+          --cap-add=NET_RAW
+          --cap-add=SYS_ADMIN
+          --tmpfs /run
+          --tmpfs /run/lock
+          --tmpfs /tmp
+    steps:
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - name: Start Deployment
-      uses: wshihadeh/docker-deployment-action@master
+    - name: Start Deployment 1 - Basic
+      uses: ./
       with:
-        remote_docker_host: ${{ secrets.HOST }}
-        ssh_private_key: ${{ secrets.PRIVATE_KEY }}
-        ssh_public_key: ${{ secrets.PUBLIC_KEY }}
-        deployment_mode: docker-compose
-        copy_stack_file: true
-        deploy_path: /root/deployment-test
-        stack_file_name: docker-compose.yml
-        pull_images_first: true
-        keep_files: 3
-        args: -p test up -d
+        deployment_mode: docker-swarm
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
+        remote_docker_port: "${{ env.CONTAINER_PORT }}"
+        remote_docker_username: "${{ env.SSH_USERNAME }}"
+        ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
+        ssh_public_key: "${{ needs.run_test_service.outputs.ssh_server_public_key }}"
+        stack_file_path: ./tests/docker-compose.yml
+        stack_name: nginx_1
 
-    - name: Start Deployment without copy
-      uses: wshihadeh/docker-deployment-action@master
+  test2:
+    runs-on: ubuntu-latest
+    name: "No pub key"
+    needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
+    services:
+      docker-throw-ssh:
+        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+        ports:
+          - 2222:22
+        options: >
+          --privileged
+          --tty
+          -v /sys/fs/cgroup:/sys/fs/cgroup
+          --cgroupns=host
+          --cap-add=NET_ADMIN
+          --cap-add=NET_RAW
+          --cap-add=SYS_ADMIN
+          --tmpfs /run
+          --tmpfs /run/lock
+          --tmpfs /tmp
+    steps:
+    - uses: actions/checkout@v4
       with:
-        remote_docker_host: ${{ secrets.HOST }}
-        ssh_private_key: ${{ secrets.PRIVATE_KEY }}
-        ssh_public_key: ${{ secrets.PUBLIC_KEY }}
-        deployment_mode: docker-compose
-        copy_stack_file: false
-        deploy_path: /root/deployment-test
-        stack_file_name: docker-compose.yml
-        pull_images_first: true
-        keep_files: 3
-        args: -p test up -d
+        fetch-depth: 1
+    - name: Start Deployment 2 - No pub key
+      uses: ./
+      with:
+        deployment_mode: docker-swarm
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
+        remote_docker_port: "${{ env.CONTAINER_PORT }}"
+        remote_docker_username: "${{ env.SSH_USERNAME }}"
+        ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
+        stack_file_path: ./tests/docker-compose.yml
+        stack_name: nginx_2
+
+  test3:
+    runs-on: ubuntu-latest
+    name: "Background deploy"
+    needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
+    services:
+      docker-throw-ssh:
+        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+        ports:
+          - 2222:22
+        options: >
+          --privileged
+          --tty
+          -v /sys/fs/cgroup:/sys/fs/cgroup
+          --cgroupns=host
+          --cap-add=NET_ADMIN
+          --cap-add=NET_RAW
+          --cap-add=SYS_ADMIN
+          --tmpfs /run
+          --tmpfs /run/lock
+          --tmpfs /tmp
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+    - name: Start Deployment 3 - Background deploy
+      uses: ./
+      with:
+        deployment_mode: docker-swarm
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
+        remote_docker_port: "${{ env.CONTAINER_PORT }}"
+        remote_docker_username: "${{ env.SSH_USERNAME }}"
+        ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
+        ssh_public_key: "${{ needs.run_test_service.outputs.ssh_server_public_key }}"
+        stack_file_path: ./tests/docker-compose.yml
+        stack_name: nginx_3
+        deploy_foreground: false
+
+  test4:
+    runs-on: ubuntu-latest
+    name: "Debug"
+    needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
+    services:
+      docker-throw-ssh:
+        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+        ports:
+          - 2222:22
+        options: >
+          --privileged
+          --tty
+          -v /sys/fs/cgroup:/sys/fs/cgroup
+          --cgroupns=host
+          --cap-add=NET_ADMIN
+          --cap-add=NET_RAW
+          --cap-add=SYS_ADMIN
+          --tmpfs /run
+          --tmpfs /run/lock
+          --tmpfs /tmp
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+    - name: Start Deployment 4 - Debug
+      uses: ./
+      with:
+        deployment_mode: docker-swarm
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
+        remote_docker_port: "${{ env.CONTAINER_PORT }}"
+        remote_docker_username: "${{ env.SSH_USERNAME }}"
+        ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
+        ssh_public_key: "${{ needs.run_test_service.outputs.ssh_server_public_key }}"
+        stack_file_path: ./tests/docker-compose.yml
+        stack_name: nginx_4
+        debug: true

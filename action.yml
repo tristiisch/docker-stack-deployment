@@ -13,7 +13,6 @@ inputs:
     required: true
   ssh_public_key:
     description: 'Public key of the SSH server'
-    required: true
   ssh_private_key:
     description: 'Private key of the SSH client'
     required: true
