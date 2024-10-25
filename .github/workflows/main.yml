@@ -249,7 +249,7 @@ jobs:
 
       - name: Run SSH test with strict host key checking
         run: |
-          ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=/tmp/known_hosts_temp' -o 'StrictHostKeyChecking=strict' \
+          ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=/tmp/known_hosts_temp' -o 'StrictHostKeyChecking=yes' \
             -p "${{ env.CONTAINER_HOST_PORT }}" "${{ env.SSH_USERNAME }}@${{ env.CONTAINER_NAME}}" docker info
 
   test1:
