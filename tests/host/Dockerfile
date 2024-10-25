@@ -28,7 +28,7 @@ RUN \
         software-properties-common \
         openssh-server && \
 	# Clean up
-	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+	rm -rf /var/lib/apt/lists/*
 
 # Setup Docker's APT repository and install Docker
 RUN install -m 0755 -d /etc/apt/keyrings && \

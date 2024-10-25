@@ -72,7 +72,7 @@ jobs:
         id: ssh_key_private
         run: |
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "private<<$EOF" >> $GITHUB_OUTPUT
+          echo "value<<$EOF" >> $GITHUB_OUTPUT
           cat ${{ env.SSH_KEY_PRIVATE_PATH }} >> $GITHUB_OUTPUT
           echo "$EOF" >> $GITHUB_OUTPUT
           echo "Output :"
