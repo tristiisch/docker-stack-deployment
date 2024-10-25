@@ -13,6 +13,7 @@ env:
   SSH_KEY_TYPE: "ed25519"
   SSH_KEY_PRIVATE_PATH: "/tmp/ssh/id_ed25519"
   SSH_KEY_PUBLIC_PATH: "/tmp/ssh/id_ed25519.pub"
+  SSH_KEY_KNOWN_HOSTS: "/tmp/ssh/known_host"
   SSH_USERNAME: "deploy"
   IMAGE_BASE_PATH: "./tests/host/Dockerfile"
   IMAGE_BASE_NAME: "ghcr.io/tristiisch/docker_throw_ssh"
@@ -213,6 +214,9 @@ jobs:
           DIR_PATH=$(dirname ${{ env.SSH_KEY_PRIVATE_PATH }})
           mkdir -p "$DIR_PATH"
           chmod 700 "$DIR_PATH"
+          DIR_PATH=$(dirname ${{ env.SSH_KEY_KNOWN_HOSTS }})
+          mkdir -p "$DIR_PATH"
+          chmod 700 "$DIR_PATH"
 
       - name: Save generated private SSH key to file
         run: |
@@ -240,16 +244,16 @@ jobs:
       - name: Save SSH server public key to temporary known_hosts file
         run: |
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          cat << $EOF > /tmp/known_hosts_temp
-          ${{ steps.get_ssh_public_key.outputs.value }}
+          cat << $EOF > ${{ env.SSH_KEY_KNOWN_HOSTS }}
+          ${{ env.CONTAINER_HOST_NAME}}:${{ env.CONTAINER_HOST_PORT }} ${{ steps.get_ssh_public_key.outputs.value }}
           $EOF
-          chmod 644 /tmp/known_hosts_temp
-          echo "Known_hosts is :"
-          cat /tmp/known_hosts_temp
+          chmod 644 ${{ env.SSH_KEY_KNOWN_HOSTS }}
+          echo "Known hosts is :"
+          cat ${{ env.SSH_KEY_KNOWN_HOSTS }}
 
       - name: Run SSH test with strict host key checking
         run: |
-          ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=/tmp/known_hosts_temp' -o 'StrictHostKeyChecking=yes' \
+          ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=${{ env.SSH_KEY_KNOWN_HOSTS }}' -o 'StrictHostKeyChecking=yes' \
             -p "${{ env.CONTAINER_HOST_PORT }}" "${{ env.SSH_USERNAME }}@${{ env.CONTAINER_HOST_NAME}}" docker info
 
   test1:
