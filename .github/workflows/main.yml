@@ -13,7 +13,7 @@ env:
   SSH_KEY_TYPE: "ed25519"
   SSH_KEY_PRIVATE_PATH: "/tmp/ssh/id_ed25519"
   SSH_KEY_PUBLIC_PATH: "/tmp/ssh/id_ed25519.pub"
-  SSH_KEY_KNOWN_HOSTS: "/tmp/ssh/known_host"
+  S: "/tmp/ssh/known_host"
   SSH_USERNAME: "deploy"
   IMAGE_BASE_PATH: "./tests/host/Dockerfile"
   IMAGE_BASE_NAME: "ghcr.io/tristiisch/docker_throw_ssh"
@@ -214,7 +214,7 @@ jobs:
           DIR_PATH=$(dirname ${{ env.SSH_KEY_PRIVATE_PATH }})
           mkdir -p "$DIR_PATH"
           chmod 700 "$DIR_PATH"
-          DIR_PATH=$(dirname ${{ env.SSH_KEY_KNOWN_HOSTS }})
+          DIR_PATH=$(dirname ${{ env.S }})
           mkdir -p "$DIR_PATH"
           chmod 700 "$DIR_PATH"
 
@@ -244,16 +244,16 @@ jobs:
       - name: Save SSH server public key to temporary known_hosts file
         run: |
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          cat << $EOF > ${{ env.SSH_KEY_KNOWN_HOSTS }}
+          cat << $EOF > ${{ env.S }}
           [${{ env.CONTAINER_HOST_NAME}}]:${{ env.CONTAINER_HOST_PORT }} ${{ steps.get_ssh_public_key.outputs.value }}
           $EOF
-          chmod 644 ${{ env.SSH_KEY_KNOWN_HOSTS }}
+          chmod 644 ${{ env.S }}
           echo "Known hosts is :"
-          cat ${{ env.SSH_KEY_KNOWN_HOSTS }}
+          cat ${{ env.S }}
 
       - name: Run SSH test with strict host key checking
         run: |
-          ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=${{ env.SSH_KEY_KNOWN_HOSTS }}' -o 'StrictHostKeyChecking=yes' \
+          ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=${{ env.S }}' -o 'StrictHostKeyChecking=yes' \
             -p "${{ env.CONTAINER_HOST_PORT }}" "${{ env.SSH_USERNAME }}@${{ env.CONTAINER_HOST_NAME}}" docker info
 
   test1:
@@ -280,7 +280,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: ./.github/workflows/setup
     - name: Start Deployment 1 - Basic
       uses: ./
       with:
@@ -317,7 +316,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: ./.github/workflows/setup
     - name: Start Deployment 2 - No pub key
       uses: ./
       with:
@@ -353,7 +351,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: ./.github/workflows/setup
     - name: Start Deployment 3 - Background deploy
       uses: ./
       with:
@@ -391,7 +388,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - uses: ./.github/workflows/setup
     - name: Start Deployment 4 - Debug
       uses: ./
       with:
