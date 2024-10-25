@@ -9,10 +9,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install systemd
 RUN apt update && \
 	apt install -y \
-    systemd \
-    systemd-sysv\
-    dbus && \
-    apt clean && \
+		systemd \
+		systemd-sysv\
+		dbus && \
+	# Clean up
 	rm -rf /var/lib/apt/lists/*
 
 RUN rm -rf /lib/systemd/system/multi-user.target.wants/* && \
@@ -49,7 +49,7 @@ RUN install -m 0755 -d /etc/apt/keyrings && \
 		containerd.io \
 		docker-buildx-plugin \
 		docker-compose-plugin && \
-	# Clean up again
+	# Clean up
 	rm -rf /var/lib/apt/lists/*
 
 # SSH Server Configuration

@@ -7,6 +7,9 @@ ARG SSH_PRIVATE_ACCOUNT=deploy
 
 RUN test -n "$SSH_PUBLIC_KEY" || (echo "Error: SSH_PUBLIC_KEY is not set" && exit 1)
 
+# Authentification only with key
+RUN echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config.d/aa-custom
+
 # SSH Account
 RUN useradd -m $SSH_PRIVATE_ACCOUNT \
 	&& usermod -aG docker $SSH_PRIVATE_ACCOUNT \
