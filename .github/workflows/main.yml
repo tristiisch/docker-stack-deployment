@@ -53,7 +53,9 @@ jobs:
     steps:
       - name: Create directory for SSH key
         run: |
-          mkdir -p "$(dirname ${{ env.SSH_KEY_PRIVATE_PATH }})"
+          DIR_PATH=$(dirname ${{ env.SSH_KEY_PRIVATE_PATH }})
+          mkdir -p "$DIR_PATH"
+          chmod 700 "$DIR_PATH"
       - name: Generate SSH key pair
         run: |
           ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PRIVATE_PATH }}" -N "" -o -a 100
@@ -206,7 +208,9 @@ jobs:
 
       - name: Create directory for SSH key
         run: |
-          mkdir -p "$(dirname ${{ env.SSH_KEY_PRIVATE_PATH }})"
+          DIR_PATH=$(dirname ${{ env.SSH_KEY_PRIVATE_PATH }})
+          mkdir -p "$DIR_PATH"
+          chmod 700 "$DIR_PATH"
 
       - name: Save generated private SSH key to file
         run: |
@@ -214,6 +218,7 @@ jobs:
           cat << $EOF > ${{ env.SSH_KEY_PRIVATE_PATH }}
           ${{ needs.generate_key.outputs.private_key }}
           $EOF
+          chmod 600 "${{ env.SSH_KEY_PRIVATE_PATH }}"
 
       - name: Run SSH connection test and retrieve Docker info
         run: |
@@ -234,6 +239,7 @@ jobs:
           cat << $EOF > /tmp/known_hosts_temp
           ${{ steps.get_ssh_public_key.outputs.value }}
           $EOF
+          chmod 644 /tmp/known_hosts_temp
 
       - name: Run SSH test with strict host key checking
         run: |
