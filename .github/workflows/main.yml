@@ -245,7 +245,7 @@ jobs:
           $EOF
           chmod 644 /tmp/known_hosts_temp
           echo "Known_hosts is :"
-          cat ${{ env.SSH_KEY_PRIVATE_PATH }}
+          cat /tmp/known_hosts_temp
 
       - name: Run SSH test with strict host key checking
         run: |
