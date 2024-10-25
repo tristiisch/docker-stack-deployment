@@ -18,10 +18,6 @@ if [ -z "$INPUT_REMOTE_DOCKER_USERNAME" ]; then
 	error "Input remote_docker_username is required."
 fi
 
-if [ -z "$INPUT_SSH_PUBLIC_KEY" ]; then
-	error "Input ssh_public_key is required."
-fi
-
 if [ -z "$INPUT_SSH_PRIVATE_KEY" ]; then
 	error "Input ssh_private_key is required."
 fi
@@ -85,7 +81,7 @@ case $INPUT_DEPLOYMENT_MODE in
 
 	# Rotate secret if any
 	POST_SCRIPTS_FOLDER=""
-	if [ -n "${INPUT_SECRETS+set}" ]; then
+	if [ -n "${INPUT_SECRETS+set}" ] && [ -n "$INPUT_SECRETS" ]; then
 		POST_SCRIPTS_FOLDER="/opt/scripts/post"
 		export POST_SCRIPTS_FOLDER
 		"$WORKDIR/scripts/docker_secrets.sh" "$INPUT_STACK_FILE_PATH" "$INPUT_STACK_NAME" $INPUT_SECRETS

@@ -34,12 +34,12 @@ if [ "$INPUT_COPY_STACK_FILE" = "true" ] ; then
 	info "Removing outdated backup files"
 	execute_ssh "ls -t $INPUT_DEPLOY_PATH/stacks/docker-stack-* 2>/dev/null | tail -n +$INPUT_KEEP_FILES | xargs rm --  2>/dev/null || true"
 
-	if ! [ -z "$INPUT_PULL_IMAGES_FIRST" ] && [ "$INPUT_PULL_IMAGES_FIRST" = 'true' ] ; then
+	if [ -n "$INPUT_PULL_IMAGES_FIRST" ] && [ "$INPUT_PULL_IMAGES_FIRST" = 'true' ] ; then
 		info "Pulling the latest Docker image"
 		execute_ssh "$DEPLOYMENT_COMMAND" "pull"
 	fi
 
-	if ! [ -z "$INPUT_PRE_DEPLOYMENT_COMMAND_ARGS" ]; then
+	if [ -n "$INPUT_PRE_DEPLOYMENT_COMMAND_ARGS" ]; then
 		info "Executing pre-commands"
 		execute_ssh "$DEPLOYMENT_COMMAND $INPUT_PRE_DEPLOYMENT_COMMAND_ARGS" 2>&1
 	fi
