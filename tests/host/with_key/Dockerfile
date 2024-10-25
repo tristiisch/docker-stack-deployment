@@ -13,8 +13,10 @@ RUN useradd -m $SSH_PRIVATE_ACCOUNT \
 	&& chmod 700 -R /home/$SSH_PRIVATE_ACCOUNT \
     && mkdir -p /home/$SSH_PRIVATE_ACCOUNT/.ssh \
     && chmod 700 /home/$SSH_PRIVATE_ACCOUNT/.ssh \
+    && chown $SSH_PRIVATE_ACCOUNT:$SSH_PRIVATE_ACCOUNT /home/$SSH_PRIVATE_ACCOUNT/.ssh \
     && echo "$SSH_PUBLIC_KEY" > /home/$SSH_PRIVATE_ACCOUNT/.ssh/authorized_keys \
-    && chmod 600 /home/$SSH_PRIVATE_ACCOUNT/.ssh/authorized_keys
+    && chmod 600 /home/$SSH_PRIVATE_ACCOUNT/.ssh/authorized_keys \
+    && chown $SSH_PRIVATE_ACCOUNT:$SSH_PRIVATE_ACCOUNT /home/$SSH_PRIVATE_ACCOUNT/.ssh/authorized_keys
 
 COPY ./docker-swarm-init.service /etc/systemd/system/docker-swarm-init.service
 # RUN touch /etc/docker/swarm_initialized

@@ -6,21 +6,26 @@ LABEL org.opencontainers.image.source=https://github.com/tristiisch/docker-stack
 ENV container=docker
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN \
-	# Remove unnecessary systemd files
-	rm -rf /lib/systemd/system/multi-user.target.wants/* && \
+# Install systemd
+RUN apt update && \
+	apt install -y \
+    systemd \
+    systemd-sysv\
+    dbus && \
+    apt clean && \
+	rm -rf /var/lib/apt/lists/*
+
+RUN rm -rf /lib/systemd/system/multi-user.target.wants/* && \
 	rm -rf /etc/systemd/system/*.wants/* && \
 	rm -rf /lib/systemd/system/local-fs.target.wants/* && \
 	rm -rf /lib/systemd/system/sockets.target.wants/*udev* && \
 	rm -rf /lib/systemd/system/sockets.target.wants/*initctl* && \
 	rm -rf /lib/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup* && \
-	rm -rf /lib/systemd/system/systemd-update-utmp* && \
-	apt update && \
-	# Install systemd, ssh server and tools to install Docker's APT repository
+	rm -rf /lib/systemd/system/systemd-update-utmp*
+
+RUN \
+	# SSH server and tools to install Docker's APT repository
     apt install -y --no-install-recommends \
-        systemd \
-        systemd-sysv \
-        dbus \
         ca-certificates \
         curl \
         gnupg \
