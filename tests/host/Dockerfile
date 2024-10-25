@@ -25,7 +25,8 @@ RUN rm -rf /lib/systemd/system/multi-user.target.wants/* && \
 
 RUN \
 	# SSH server and tools to install Docker's APT repository
-    apt install -y --no-install-recommends \
+    apt update && \
+	apt install -y --no-install-recommends \
         ca-certificates \
         curl \
         gnupg \

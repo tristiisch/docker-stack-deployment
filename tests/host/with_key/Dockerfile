@@ -7,7 +7,7 @@ ARG SSH_PRIVATE_ACCOUNT=deploy
 
 RUN test -n "$SSH_PUBLIC_KEY" || (echo "Error: SSH_PUBLIC_KEY is not set" && exit 1)
 
-# ---------- SSH Account
+# SSH Account
 RUN useradd -m $SSH_PRIVATE_ACCOUNT \
 	&& usermod -aG docker $SSH_PRIVATE_ACCOUNT \
 	&& chmod 700 -R /home/$SSH_PRIVATE_ACCOUNT \
@@ -18,6 +18,6 @@ RUN useradd -m $SSH_PRIVATE_ACCOUNT \
     && chmod 600 /home/$SSH_PRIVATE_ACCOUNT/.ssh/authorized_keys \
     && chown $SSH_PRIVATE_ACCOUNT:$SSH_PRIVATE_ACCOUNT /home/$SSH_PRIVATE_ACCOUNT/.ssh/authorized_keys
 
+# Create one shot usage service to init swarm on first container boot
 COPY ./docker-swarm-init.service /etc/systemd/system/docker-swarm-init.service
-# RUN touch /etc/docker/swarm_initialized
 RUN ln -s /etc/systemd/system/docker-swarm-init.service /etc/systemd/system/multi-user.target.wants/docker-swarm-init.service
