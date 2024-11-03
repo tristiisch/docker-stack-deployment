@@ -80,7 +80,7 @@ if ! command -v yq >/dev/null 2>&1; then
     exit 1 
 fi
 
-debug "docker_secret.sh $*"
+debug "$0 \"$*\""
 
 if [ -z "${1+set}" ] || [ -z "${2+set}" ] || [ -z "${3+set}" ] || [ -z "${4+set}" ]; then
     echo "Usage: $0 docker-compose.yml stack_name service_name secret_name key1 value1 key2 value2 ..." >&2
@@ -106,7 +106,7 @@ secret_label_hash_name="hash"
 # Check if there are enough arguments for key-value pairs
 num_args=$(($# - secret_start_after))
 if [ $num_args -eq 0 ] || [ $((num_args % 2)) -ne 0 ]; then
-	echo "Error: Insufficient key-value pairs provided for the secret." >&2
+	error "Insufficient key-value pairs provided for the secret."
 	exit 1
 fi
 

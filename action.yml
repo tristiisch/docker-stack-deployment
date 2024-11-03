@@ -18,7 +18,7 @@ inputs:
     required: true
   deployment_mode:
     description: 'Deployment mode: docker-swarm or docker-compose (default: docker-compose)'
-    default: './docker-compose'
+    default: 'docker-compose'
   copy_stack_file:
     description: 'Copy stack file to remote server and deploy from the server (default: false)'
   deploy_path:

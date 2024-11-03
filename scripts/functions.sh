@@ -3,9 +3,11 @@ set -eu
 
 KEY_NAME="docker_key"
 SSH_FOLDER="$HOME/.ssh"
-SSH_CONFIG_PATH="/etc/ssh/ssh_config.d/docker_stack_deployement.conf"
+SSH_CONFIG_FOLDER="$SSH_FOLDER/config.d"
+SSH_CONFIG_INCLUDE_TXT="Include ~/.ssh/config.d/*"
+SSH_CONFIG_PATH="$SSH_CONFIG_FOLDER/docker_stack_deployement.conf"
 KEY_PATH="$SSH_FOLDER/$KEY_NAME"
-KNOWN_HOST_PATH=$SSH_FOLDER/known_hosts_$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+KNOWN_HOST_PATH=$SSH_FOLDER/known_hosts_$(tr -dc '[:lower:]' < /dev/urandom | head -c 16)
 DOCKER_CONTEXT_NAME="docker-remote"
 
 setup_ssh() {
@@ -22,7 +24,7 @@ setup_ssh() {
 	mkdir -p "$SSH_FOLDER"
 	chmod 700 "$SSH_FOLDER"
 	if is_debug; then
-		debug "Verify permission on ssh folder"
+		debug "Checking permissions on SSH folder at $SSH_FOLDER"
 		ls -l "$SSH_FOLDER"
 	fi
 
@@ -30,9 +32,24 @@ setup_ssh() {
 	printf '%s\n' "$INPUT_SSH_PRIVATE_KEY" > "$KEY_PATH"
 	chmod 600 "$KEY_PATH"
 	if is_debug; then
-		debug "Verify permission on private key"
+		debug "Checking permissions on private key at $KEY_PATH"
 		ls -l "$KEY_PATH"
 	fi
+
+	if [ -e "$SSH_FOLDER/config" ]; then
+		debug "SSH client configuration file found at $SSH_FOLDER/config."
+		if ! grep -Fxq "$SSH_CONFIG_INCLUDE_TXT" "$SSH_FOLDER/config"; then
+        	debug "Include directive not found in SSH client config. Appending directive: $SSH_CONFIG_INCLUDE_TXT"
+			printf "\n%s" "$SSH_CONFIG_INCLUDE_TXT" >> "$SSH_FOLDER/config"
+		else
+			debug "Include directive already present in SSH client configuration file. No changes made."
+		fi
+	else
+    	debug "SSH client configuration file not found at $SSH_FOLDER/config. Creating new configuration file with directive: $SSH_CONFIG_INCLUDE_TXT"
+		printf "%s" "$SSH_CONFIG_INCLUDE_TXT" > "$SSH_FOLDER/config"
+	fi
+
+	mkdir -p "$SSH_CONFIG_FOLDER"
 
 	cat <<EOF > "$SSH_CONFIG_PATH"
 	IdentityFile $KEY_PATH
@@ -101,8 +118,16 @@ execute_ssh(){
 	if is_debug; then
 		verbose_arg="-v"
 	fi
-	debug "Execute Over SSH : $ $*"
+	debug "Execute over SSH : $ $*"
 	ssh $verbose_arg -p "$SSH_PORT" "$DOCKER_USER_HOST" "$@" 2>&1
+}
+
+execute_ssh_raw(){
+	SSH_PORT=$INPUT_REMOTE_DOCKER_PORT
+	debug "Execute over SSH with raw response : $ $*"
+	output=$(ssh -p "$SSH_PORT" "$DOCKER_USER_HOST" "$@")
+	debug "Output : $output"
+    export EXECUTE_SSH_RAW_OUTPUT="$output"
 }
 
 copy_ssh(){
@@ -118,9 +143,9 @@ copy_ssh(){
 }
 
 is_debug() {
-    if { [ -z "${INPUT_DEBUG+set}" ] || [ "$INPUT_DEBUG" != "true" ]; } && { [ -z "${RUNNER_DEBUG+set}" ] || [ "$RUNNER_DEBUG" != "1" ]; }; then
-        return 1
-    fi
+	if { [ -z "${INPUT_DEBUG+set}" ] || [ "$INPUT_DEBUG" != "true" ]; } && { [ -z "${RUNNER_DEBUG+set}" ] || [ "$RUNNER_DEBUG" != "1" ]; }; then
+		return 1
+	fi
 	return 0
 }
 
@@ -136,41 +161,41 @@ WHITE='\e[0;37m'
 RESET='\e[0m'
 
 error() {
-    printf "${RED}ERROR\t%s${RESET}\n" "$1"
-    shift
-    while [ "$#" -gt 0 ]; do
-        printf "%s\n" "$1"
-        shift
-    done
-    exit 1
+	printf "${RED}ERROR\t%s${RESET}\n" "$1"
+	shift
+	while [ "$#" -gt 0 ]; do
+		printf "%s\n" "$1"
+		shift
+	done
+	exit 1
 }
 
 warning() {
-    printf "${YELLOW}WARNING\t%s${RESET}\n" "$1"
-    shift
-    while [ "$#" -gt 0 ]; do
-        printf "%s\n" "$1"
-        shift
-    done
+	printf "${YELLOW}WARNING\t%s${RESET}\n" "$1"
+	shift
+	while [ "$#" -gt 0 ]; do
+		printf "%s\n" "$1"
+		shift
+	done
 }
 
 info() {
-    printf "${CYAN}INFO\t%s${RESET}\n" "$1"
-    shift
-    while [ "$#" -gt 0 ]; do
-        printf "%s\n" "$1"
-        shift
-    done
+	printf "${CYAN}INFO\t%s${RESET}\n" "$1"
+	shift
+	while [ "$#" -gt 0 ]; do
+		printf "%s\n" "$1"
+		shift
+	done
 }
 
 debug() {
-    if ! is_debug; then
-        return
-    fi
-    printf "${MAGENTA}DEBUG\t%s${RESET}\n" "$1"
-    shift
-    while [ "$#" -gt 0 ]; do
-        printf "%s\n" "$1"
-        shift
-    done
+	if ! is_debug; then
+		return
+	fi
+	printf "${MAGENTA}DEBUG\t%s${RESET}\n" "$1"
+	shift
+	while [ "$#" -gt 0 ]; do
+		printf "%s\n" "$1"
+		shift
+	done
 }
