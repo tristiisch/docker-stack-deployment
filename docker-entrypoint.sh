@@ -22,6 +22,10 @@ if [ -z "$INPUT_SSH_PRIVATE_KEY" ]; then
 	error "Input ssh_private_key is required."
 fi
 
+if [ -z "$INPUT_SECRET_PRUNE" ]; then
+	error "Input secret_prune is required."
+fi
+
 if [ -z "$INPUT_KEEP_FILES" ]; then
 	INPUT_KEEP_FILES=4
 else
@@ -84,7 +88,7 @@ case $INPUT_DEPLOYMENT_MODE in
 	if [ -n "${INPUT_SECRETS+set}" ] && [ -n "$INPUT_SECRETS" ]; then
 		POST_SCRIPTS_FOLDER="/opt/scripts/post"
 		export POST_SCRIPTS_FOLDER
-		"$WORKDIR/scripts/docker_secrets.sh" "$INPUT_STACK_FILE_PATH" "$INPUT_STACK_NAME" $INPUT_SECRETS
+		"$WORKDIR/scripts/docker_secrets.sh" "$INPUT_STACK_FILE_PATH" "$INPUT_STACK_NAME" "$INPUT_SECRET_PRUNE" $INPUT_SECRETS
 	fi
 
 	"$WORKDIR/scripts/docker_swarm.sh"

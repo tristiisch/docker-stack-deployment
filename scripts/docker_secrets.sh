@@ -75,6 +75,24 @@ get_secrets_to_preserve() {
 	echo "$secret_to_preserve"
 }
 
+prune_secrets() {
+	if ! command -v "jq" >/dev/null 2>&1; then
+		echo "jq is not installed. Please install it to prune secrets."
+		exit 1
+	fi
+	all_secrets=$(docker secret ls -q)
+	debug "all_secrets: $all_secrets"
+	used_secrets=$(docker service ls -q | xargs -I {} docker service inspect {} --format '{{json .Spec.TaskTemplate.ContainerSpec.Secrets}}' | jq -r 'select(. != null) | .[].SecretID' | sort -u)
+	debug "used_secrets: $used_secrets"
+
+	for secret in $all_secrets; do
+		if ! echo "$used_secrets" | grep -qw "$secret"; then
+			debug "Removing unused secret: $secret"
+			docker secret rm "$secret"
+		fi
+	done
+}
+
 if ! command -v yq >/dev/null 2>&1; then
     echo "yq is needed to use this script." >&2
     exit 1 
@@ -83,7 +101,7 @@ fi
 debug "$0 \"$*\""
 
 if [ -z "${1+set}" ] || [ -z "${2+set}" ] || [ -z "${3+set}" ] || [ -z "${4+set}" ]; then
-    echo "Usage: $0 docker-compose.yml stack_name service_name secret_name key1 value1 key2 value2 ..." >&2
+    echo "Usage: $0 docker-compose.yml stack_name is_secret_prune service_name secret_name key1 value1 key2 value2 ..." >&2
     exit 1
 fi
 
@@ -93,14 +111,15 @@ fi
 
 docker_compose_file_path=$1
 stack_name=$2
-service_name=$3
-secret_name=$4
+secret_prune=$3
+service_name=$4
+secret_name=$5
 service_fullname=${stack_name}_${service_name}
 
 secret_name_suffix=$(openssl rand -hex 2)
 secret_name_full="${secret_name}_${secret_name_suffix}"
 secret_values=""
-secret_start_after=4
+secret_start_after=5
 secret_label_hash_name="hash"
 
 # Check if there are enough arguments for key-value pairs
@@ -130,6 +149,12 @@ dotenv_secret=$(format_secret_input "$secret_values")
 info "Calculating hash for secrets"
 dotenv_secret_hash=$(calculate_hash "$dotenv_secret")
 debug "Result: $dotenv_secret_hash"
+
+debug "secret_prune: $secret_prune"
+if [ "$secret_prune" = "true" ]; then
+	info "Prune secrets"
+	prune_secrets
+fi
 
 # Check if service exists
 if docker service inspect "$service_fullname" >/dev/null 2>&1; then

@@ -401,3 +401,49 @@ jobs:
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx_4
         debug: true
+
+  test5:
+    runs-on: ubuntu-latest
+    name: "Test"
+    needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
+    env: 
+      USERNAME: foo_bar
+      PASSWORD: v0~82q@NMN16*Cq
+      KEY: 6H|XQsqx%£U#L.oW,Sv"b28_14Z6UI7;MK<0O0-n2QgHl34C;v
+      
+    services:
+      docker-throw-ssh:
+        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+        ports:
+          - 2222:22
+        options: >
+          --privileged
+          --tty
+          -v /sys/fs/cgroup:/sys/fs/cgroup
+          --cgroupns=host
+          --cap-add=NET_ADMIN
+          --cap-add=NET_RAW
+          --cap-add=SYS_ADMIN
+          --tmpfs /run
+          --tmpfs /run/lock
+          --tmpfs /tmp
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+    - name: Start Deployment 4 - Debug
+      uses: ./
+      with:
+        deployment_mode: docker-swarm
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
+        remote_docker_port: "${{ env.CONTAINER_PORT }}"
+        remote_docker_username: "${{ env.SSH_USERNAME }}"
+        ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
+        ssh_public_key: "${{ needs.run_test_service.outputs.ssh_server_public_key }}"
+        stack_file_path: ./tests/docker-compose.yml
+        stack_name: nginx_5
+        secrets: |
+          ${{ env.SERVICE_MAIN_NAME}}
+          PASSWORD=${{ env.PASSWORD}}
+          KEY=${{ env.KEY}}
+        debug: true
