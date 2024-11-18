@@ -5,7 +5,7 @@ KEY_NAME="docker_key"
 SSH_FOLDER="$HOME/.ssh"
 SSH_CONFIG_PATH="/etc/ssh/ssh_config.d/docker_stack_deployement.conf"
 KEY_PATH="$SSH_FOLDER/$KEY_NAME"
-KNOWN_HOST_PATH=$SSH_FOLDER/known_hosts_$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+KNOWN_HOST_PATH=$SSH_FOLDER/known_hosts_$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 15 | head -n 1)
 DOCKER_CONTEXT_NAME="docker-remote"
 
 setup_ssh() {
