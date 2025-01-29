@@ -43,7 +43,16 @@ Specify the Remote Docker username like `johndoe`.
 
 ### `ssh_public_key`
 
-Provide the SSH public key for the Remote Docker. Do not provide the content of `id_rsa.pub`. Instead, provide the content of `~/.ssh/known_hosts`, obtainable by connecting to the host once using your machine.
+Provide the SSH public key for the remote Docker server. **Do not use the content of `id_rsa.pub`**. Instead:
+
+1. Run `ssh-keyscan -t <algorithm> <host>` (replace `<algorithm>` with `rsa`, `ecdsa`, or `ed25519`, and `<host>` with the server's hostname or IP).
+   
+   Example for RSA:
+   ```
+   ssh-keyscan -t rsa <host>
+   ```
+
+2. Choose the line matching your private key’s algorithm and **copy only the key** (exclude the host and algorithm name).
 
 Examples:
 ```
@@ -113,6 +122,13 @@ Specify arguments to pass to the deployment command, either `docker` or `docker-
 ### `debug`
 
 Toggle verbose messaging for debugging purposes. This feature is automatically set to true when initiating the job in GitHub debug mode.
+
+## TODO
+
+- [x] **Create external Docker Secrets**  
+- [ ] **Create external Docker Networks**  
+- [ ] **Create external Docker Configs**  
+- [ ] **Populate Dockerfile variables with pipeline variables**
 
 ## License
 
