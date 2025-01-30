@@ -127,8 +127,9 @@ Toggle verbose messaging for debugging purposes. This feature is automatically s
 
 - [x] **Create external Docker Secrets**  
 - [ ] **Create external Docker Networks**  
-- [ ] **Create external Docker Configs**  
+- [ ] **Create and rotate Docker Configs**
 - [ ] **Populate Dockerfile variables with pipeline variables**
+- [ ] **Read multiple docker-compose files**
 
 ## License
 

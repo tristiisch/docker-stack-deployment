@@ -3,18 +3,18 @@ set -eu
 . $WORKDIR/scripts/functions.sh
 
 get_service_secrets() {
-    service_name=$1
+	service_name=$1
 
 	return_secrets=""
-    secrets=$(docker service inspect --format '{{ range .Spec.TaskTemplate.ContainerSpec.Secrets }}{{ .SecretName }} {{ end }}' "$service_name")
+	secrets=$(docker service inspect --format '{{ range .Spec.TaskTemplate.ContainerSpec.Secrets }}{{ .SecretName }} {{ end }}' "$service_name")
 	for secret in $secrets; do
 		return_secrets="$return_secrets$secret "
 	done
-    echo "${return_secrets%" "}"
+	echo "${return_secrets%" "}"
 }
 
 calculate_hash() {
-    printf "%s" "$1" | sha512sum | cut -d ' ' -f1
+	printf "%s" "$1" | sha512sum | cut -d ' ' -f1
 }
 
 format_secret_input() {
@@ -26,7 +26,7 @@ format_secret_input() {
 		value="${pair#*:}"
 		dotenv_secret="$dotenv_secret$key=$value\n"
 	done
-    printf '%s' "$dotenv_secret"
+	printf '%s' "$dotenv_secret"
 }
 
 # Check if the secrets have been configured by this script
@@ -76,15 +76,15 @@ get_secrets_to_preserve() {
 }
 
 if ! command -v yq >/dev/null 2>&1; then
-    echo "yq is needed to use this script." >&2
-    exit 1 
+	echo "yq is needed to use this script." >&2
+	exit 1 
 fi
 
 debug "docker_secret.sh $*"
 
 if [ -z "${1+set}" ] || [ -z "${2+set}" ] || [ -z "${3+set}" ] || [ -z "${4+set}" ]; then
-    echo "Usage: $0 docker-compose.yml stack_name service_name secret_name key1 value1 key2 value2 ..." >&2
-    exit 1
+	echo "Usage: $0 docker-compose.yml stack_name service_name secret_name key1 value1 key2 value2 ..." >&2
+	exit 1
 fi
 
 if [ -z "${POST_SCRIPTS_FOLDER+set}" ]; then

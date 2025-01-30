@@ -118,9 +118,9 @@ copy_ssh(){
 }
 
 is_debug() {
-    if { [ -z "${INPUT_DEBUG+set}" ] || [ "$INPUT_DEBUG" != "true" ]; } && { [ -z "${RUNNER_DEBUG+set}" ] || [ "$RUNNER_DEBUG" != "1" ]; }; then
-        return 1
-    fi
+	if { [ -z "${INPUT_DEBUG+set}" ] || [ "$INPUT_DEBUG" != "true" ]; } && { [ -z "${RUNNER_DEBUG+set}" ] || [ "$RUNNER_DEBUG" != "1" ]; }; then
+		return 1
+	fi
 	return 0
 }
 
@@ -136,41 +136,41 @@ WHITE='\e[0;37m'
 RESET='\e[0m'
 
 error() {
-    printf "${RED}ERROR\t%s${RESET}\n" "$1"
-    shift
-    while [ "$#" -gt 0 ]; do
-        printf "%s\n" "$1"
-        shift
-    done
-    exit 1
+	printf "${RED}ERROR\t%s${RESET}\n" "$1"
+	shift
+	while [ "$#" -gt 0 ]; do
+		printf "%s\n" "$1"
+		shift
+	done
+	exit 1
 }
 
 warning() {
-    printf "${YELLOW}WARNING\t%s${RESET}\n" "$1"
-    shift
-    while [ "$#" -gt 0 ]; do
-        printf "%s\n" "$1"
-        shift
-    done
+	printf "${YELLOW}WARNING\t%s${RESET}\n" "$1"
+	shift
+	while [ "$#" -gt 0 ]; do
+		printf "%s\n" "$1"
+		shift
+	done
 }
 
 info() {
-    printf "${CYAN}INFO\t%s${RESET}\n" "$1"
-    shift
-    while [ "$#" -gt 0 ]; do
-        printf "%s\n" "$1"
-        shift
-    done
+	printf "${CYAN}INFO\t%s${RESET}\n" "$1"
+	shift
+	while [ "$#" -gt 0 ]; do
+		printf "%s\n" "$1"
+		shift
+	done
 }
 
 debug() {
-    if ! is_debug; then
-        return
-    fi
-    printf "${MAGENTA}DEBUG\t%s${RESET}\n" "$1"
-    shift
-    while [ "$#" -gt 0 ]; do
-        printf "%s\n" "$1"
-        shift
-    done
+	if ! is_debug; then
+		return
+	fi
+	printf "${MAGENTA}DEBUG\t%s${RESET}\n" "$1"
+	shift
+	while [ "$#" -gt 0 ]; do
+		printf "%s\n" "$1"
+		shift
+	done
 }
