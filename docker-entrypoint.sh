@@ -47,7 +47,7 @@ fi
 set -e
 
 # Copy docker compose file to temp file
-TEMP_FILE=$(mktemp)
+TEMP_FILE="$(dirname "$INPUT_STACK_FILE_PATH")/compose-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 15 | head -n 1).yml"
 cp "$INPUT_STACK_FILE_PATH" "$TEMP_FILE"
 
 # Get docker compose file name (without path of folder)
