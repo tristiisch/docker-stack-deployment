@@ -98,6 +98,7 @@ esac
 
 # Execute post commands if any
 if [ -n "$POST_SCRIPTS_FOLDER" ] && [ -d "$POST_SCRIPTS_FOLDER" ]; then
+	debug "Execute post scripts in $POST_SCRIPTS_FOLDER ..."
     find "$POST_SCRIPTS_FOLDER" -type f -executable | while read -r script; do
         info "Execute post script $script ..."
         sh "$script"

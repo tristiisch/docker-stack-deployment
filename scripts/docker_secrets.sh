@@ -194,22 +194,22 @@ yq --inplace ".secrets.$secret_name_full.external = true" "$docker_compose_file_
 info "Updating the $service_name service within the docker-compose file with the new secret"
 yq --inplace ".services.$service_name.secrets += [\"$secret_name_full\"]" "$docker_compose_file_path"
 
-if [ "$secrets_obsolete" != "" ]; then
+if [ -n "$secrets_obsolete" ]; then
 	info "Implementing post-command to remove previous secrets"
+	debug "Creating post-script folder $POST_SCRIPTS_FOLDER"
 	mkdir -p "$POST_SCRIPTS_FOLDER"
 	post_script_path="$POST_SCRIPTS_FOLDER\docker_secret_rm.sh"
+	debug "Creating post-script file $post_script_path"
 	touch "$post_script_path"
 	chmod 700 "$post_script_path"
 
-	if [ -n "$secrets_obsolete" ]; then
-		{
-			echo "#!/bin/sh"
-			echo "set -eux"
-			for obsolete_secret in $secrets_obsolete; do
-				echo "docker secret remove \"$obsolete_secret\""
-			done
-		} >> "$post_script_path"
-	fi
+	{
+		echo "#!/bin/sh"
+		echo "set -eux"
+		for obsolete_secret in $secrets_obsolete; do
+			echo "docker secret remove \"$obsolete_secret\""
+		done
+	} >> "$post_script_path"
 fi
 
 info "Completion of Docker secret rotation"
