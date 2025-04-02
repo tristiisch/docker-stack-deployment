@@ -426,7 +426,7 @@ jobs:
       with:
         fetch-depth: 1
 
-    - name: Start Deployment 4 - Secrets
+    - name: Start Deployment 5 - Secrets
       uses: ./
       with:
         deployment_mode: docker-swarm
@@ -438,4 +438,4 @@ jobs:
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx_5
         debug: true
-        secrets: web key1 value1 key2 value2
+        secrets: web nginx_5 key1 value1 key2 value2
