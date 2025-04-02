@@ -86,7 +86,8 @@ prune_secrets() {
 
 	for secret in $(docker secret ls -q); do
 		if ! echo "$used_secrets" | grep -qw "$secret"; then
-			info "Prune unused secret: $secret"
+			secret_name=$(docker secret inspect "$secret" --format '{{.Spec.Name}}')
+			info "Prune unused secret: $secret_name"
 			docker secret rm "$secret"
 		fi
 	done
@@ -196,7 +197,7 @@ yq --inplace ".services.$service_name.secrets += [\"$secret_name_full\"]" "$dock
 
 if is_debug; then
 	debug "Docker compose file $docker_compose_file_path :"
-	cat "$post_script_path"
+	cat "$docker_compose_file_path"
 fi
 
 if [ -n "$secrets_obsolete" ]; then
@@ -211,7 +212,9 @@ if [ -n "$secrets_obsolete" ]; then
 		echo "#!/bin/sh"
 		echo "set -eux"
 		for obsolete_secret in $secrets_obsolete; do
-			echo "docker secret remove \"$obsolete_secret\""
+			secret_name=$(docker secret inspect "$obsolete_secret" --format '{{.Spec.Name}}')
+			echo "Delete unused secret: $secret_name"
+			echo "docker secret rm \"$obsolete_secret\""
 		done
 	} >> "$post_script_path"
 	if is_debug; then
