@@ -44,7 +44,7 @@ inputs:
     description: '[Docker Swarm] Waiting for the stack to complete the rolling update.'
     default: true
   secrets:
-    description: 'Update Docker Secret using rotation during Stack Update. Format is service_name secret_name key1 value1 key2 value2 ...'
+    description: 'Update Docker Secret using rotation during stack update. The format is: service_name secret_name key1 value1 key2 value2 ...'
   secrets_prune:
     description: 'Remove all unused Docker secrets (default: false).'
     default: false

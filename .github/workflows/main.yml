@@ -435,7 +435,7 @@ jobs:
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx
         debug: true # TODO: remove
-        secrets: web nginx key1 value1 key2 value2
+        secrets: web secrets_env key1 value1 key2 value2
 
     - name: Deployment - Reusing secrets
       uses: ./
@@ -448,7 +448,7 @@ jobs:
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx
         debug: true # TODO: remove
-        secrets: web nginx key1 value1 key2 value2
+        secrets: web secrets_env key1 value1 key2 value2
 
     - name: Deployment - Change secrets
       uses: ./
@@ -461,7 +461,7 @@ jobs:
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx
         debug: true # TODO: remove
-        secrets: web nginx key1_b value1_b key2_b value2_b
+        secrets: web secrets_env key1_b value1_b key2_b value2_b
 
     - name: Deployment - Prune secrets
       uses: ./
@@ -474,5 +474,5 @@ jobs:
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx_2
         debug: true # TODO: remove
-        secrets: web nginx_2 key1 value1 key2 value2
+        secrets: web secrets_env_2 key1 value1 key2 value2
         secrets_prune: true

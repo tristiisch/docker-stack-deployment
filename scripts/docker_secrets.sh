@@ -31,10 +31,10 @@ format_secret_input() {
 
 # Check if the secrets have been configured by this script
 is_secret_exists() {
-	old_service_sercrets="$1"
+	old_service_secrets="$1"
 	secret_label_hash_name="$2"
 
-	for secret in $old_service_sercrets; do
+	for secret in $old_service_secrets; do
 		old_hash=$(docker secret inspect "$secret" --format="{{index .Spec.Labels \"$secret_label_hash_name\"}}")
 		if [ -n "$old_hash" ]; then
 			return 0
@@ -44,13 +44,13 @@ is_secret_exists() {
 }
 
 get_secrets_obsolete() {
-	old_service_sercrets="$1"
+	old_service_secrets="$1"
 	secret_label_hash_name="$2"
 	dotenv_secret_hash="$3"
 	secret_obsolete=""
 	new_line=$(printf '\n')
 
-	for secret in $old_service_sercrets; do
+	for secret in $old_service_secrets; do
 		old_hash=$(docker secret inspect "$secret" --format="{{index .Spec.Labels \"$secret_label_hash_name\"}}")
 		if [ -n "$old_hash" ] && printf "%s" "$old_hash" | grep -q "$new_line" && [ "$old_hash" != "$dotenv_secret_hash" ]; then
 			secret_obsolete="$secret_obsolete$secret "
@@ -60,13 +60,13 @@ get_secrets_obsolete() {
 }
 
 get_secrets_to_preserve() {
-	old_service_sercrets="$1"
+	old_service_secrets="$1"
 	secret_label_hash_name="$2"
 	dotenv_secret_hash="$3"
 	secret_to_preserve=""
 	new_line=$(printf '\n')
 
-	for secret in $old_service_sercrets; do
+	for secret in $old_service_secrets; do
 		old_hash=$(docker secret inspect "$secret" --format="{{index .Spec.Labels \"$secret_label_hash_name\"}}")
 		if [ -n "$old_hash" ] && printf "%s" "$old_hash" | grep -q "$new_line" && [ "$old_hash" = "$dotenv_secret_hash" ]; then
 			secret_to_preserve="$secret_to_preserve$secret "
@@ -148,7 +148,7 @@ dotenv_secret=$(format_secret_input "$secret_values")
 # Hash indicates when to update the secret
 info "Calculating hash for secrets"
 dotenv_secret_hash=$(calculate_hash "$dotenv_secret")
-debug "Result: $dotenv_secret_hash"
+debug "Secret hash: $dotenv_secret_hash"
 
 debug "secret_prune: $secret_prune" # TODO: Remove
 if [ "$secret_prune" = "true" ]; then
@@ -159,11 +159,11 @@ fi
 # Check if service exists
 if docker service inspect "$service_fullname" >/dev/null 2>&1; then
 	info "Fetching the current secrets for service $service_fullname"
-	old_service_sercrets=$(get_service_secrets "$service_fullname")
-	debug "Result: $old_service_sercrets"
+	old_service_secrets=$(get_service_secrets "$service_fullname")
+	debug "Result: $old_service_secrets"
 
 	info "Identifying secrets for removal"
-	secrets_obsolete=$(get_secrets_obsolete "$old_service_sercrets" "$secret_label_hash_name" "$dotenv_secret_hash")
+	secrets_obsolete=$(get_secrets_obsolete "$old_service_secrets" "$secret_label_hash_name" "$dotenv_secret_hash")
 	if [ "$secrets_obsolete" != "" ]; then
 		info "Secrets to remove:"
 		for secret_obsolete in $secrets_obsolete; do
@@ -173,7 +173,7 @@ if docker service inspect "$service_fullname" >/dev/null 2>&1; then
 	fi
 
 	info "Identifying secrets to preserve"
-	secrets_preserves=$(get_secrets_to_preserve "$old_service_sercrets" "$secret_label_hash_name" "$dotenv_secret_hash")
+	secrets_preserves=$(get_secrets_to_preserve "$old_service_secrets" "$secret_label_hash_name" "$dotenv_secret_hash")
 	for secret_preserve in $secrets_preserves; do
 		info "Preserve the old secret \"$secret_preserve\" into the docker-compose file"
 		yq --inplace ".secrets.$secret_preserve.external = true" "$docker_compose_file_path"
@@ -182,7 +182,7 @@ if docker service inspect "$service_fullname" >/dev/null 2>&1; then
 		yq --inplace ".services.$service_name.secrets += [\"$secret_preserve\"]" "$docker_compose_file_path"
 	done
 
-	if is_secret_exists "$old_service_sercrets" "$secret_label_hash_name" && [ "$secrets_obsolete" = "" ]; then
+	if is_secret_exists "$old_service_secrets" "$secret_label_hash_name" && [ "$secrets_obsolete" = "" ]; then
 		info "Secret rotation not needed"
 		return
 	fi
@@ -216,7 +216,6 @@ if [ -n "$secrets_obsolete" ]; then
 		echo "#!/bin/sh"
 		echo "set -eux"
 		for obsolete_secret in $secrets_obsolete; do
-			info "Secret to remove: $obsolete_secret"
 			echo "secret=\"$obsolete_secret\""
 			echo "secret_name=\$(docker secret inspect \"\$secret\" --format '{{.Spec.Name}}')"
 			echo "echo \"Delete unused secret: \$secret_name\""
