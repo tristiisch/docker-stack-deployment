@@ -201,9 +201,15 @@ if [ "$secrets_obsolete" != "" ]; then
 	touch "$post_script_path"
 	chmod 700 "$post_script_path"
 
-	for obsolete_secret in $secrets_obsolete; do
-		echo "docker secret remove \"$obsolete_secret\"" >> "$post_script_path"
-	done
+	if [ -n "$secrets_obsolete" ]; then
+		{
+			echo "#!/bin/sh"
+			echo "set -eux"
+			for obsolete_secret in $secrets_obsolete; do
+				echo "docker secret remove \"$obsolete_secret\""
+			done
+		} >> "$post_script_path"
+	fi
 fi
 
 info "Completion of Docker secret rotation"
