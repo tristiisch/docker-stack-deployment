@@ -22,7 +22,7 @@ setup_ssh() {
 	mkdir -p "$SSH_FOLDER"
 	chmod 700 "$SSH_FOLDER"
 	if is_debug; then
-		debug "Verify permission on ssh folder"
+		debug "Checking permissions on SSH folder at $SSH_FOLDER"
 		ls -l "$SSH_FOLDER"
 	fi
 
@@ -30,7 +30,7 @@ setup_ssh() {
 	printf '%s\n' "$INPUT_SSH_PRIVATE_KEY" > "$KEY_PATH"
 	chmod 600 "$KEY_PATH"
 	if is_debug; then
-		debug "Verify permission on private key"
+		debug "Checking permissions on private key at $KEY_PATH"
 		ls -l "$KEY_PATH"
 	fi
 
@@ -101,8 +101,16 @@ execute_ssh(){
 	if is_debug; then
 		verbose_arg="-v"
 	fi
-	debug "Execute Over SSH : $ $*"
+	debug "Execute over SSH : $ $*"
 	ssh $verbose_arg -p "$SSH_PORT" "$DOCKER_USER_HOST" "$@" 2>&1
+}
+
+execute_ssh_raw(){
+	SSH_PORT=$INPUT_REMOTE_DOCKER_PORT
+	debug "Execute over SSH with raw response : $ $*"
+	output=$(ssh -p "$SSH_PORT" "$DOCKER_USER_HOST" "$@")
+	debug "Output : $output"
+	export EXECUTE_SSH_RAW_OUTPUT="$output"
 }
 
 copy_ssh(){
