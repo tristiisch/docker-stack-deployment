@@ -438,4 +438,4 @@ jobs:
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx_5
         debug: true
-        secrets: key1 value1 key2 value2
+        secrets: web key1 value1 key2 value2
