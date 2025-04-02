@@ -63,12 +63,16 @@ EOF
 			ls -l "$KNOWN_HOST_PATH"
 		fi
 
-		KNOWN_HOST=$(cat "$KNOWN_HOST_PATH")
-		debug "$KNOWN_HOST_PATH :" "$KNOWN_HOST"
+		if is_debug; then
+			debug "SSH known host $KNOWN_HOST_PATH :"
+			cat "$KNOWN_HOST_PATH"
+		fi
 	fi
 	printf '	StrictHostKeyChecking %s\n' $STRICT_HOST >> "$SSH_CONFIG_PATH"
-	SSH_CONFIG=$(cat "$SSH_CONFIG_PATH")
-	debug "$SSH_CONFIG_PATH :" "$SSH_CONFIG"
+	if is_debug; then
+		debug "SSH config $SSH_CONFIG_PATH :"
+		cat "$SSH_CONFIG_PATH"
+	fi
 
 	info "Testing SSH connection ..."
 	if is_debug; then

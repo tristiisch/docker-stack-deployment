@@ -256,7 +256,7 @@ jobs:
           ssh -v -i "${{ env.SSH_KEY_PRIVATE_PATH }}" -o 'UserKnownHostsFile=${{ env.KNOWN_HOST_PATH }}' -o 'StrictHostKeyChecking=yes' \
             -p "${{ env.CONTAINER_HOST_PORT }}" "${{ env.SSH_USERNAME }}@${{ env.CONTAINER_HOST_NAME}}" docker info
 
-  test1:
+  test_basic:
     runs-on: ubuntu-latest
     name: "Basic"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
@@ -280,7 +280,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - name: Deployment 1 - Basic
+    - name: Deployment
       uses: ./
       with:
         deployment_mode: docker-swarm
@@ -288,13 +288,12 @@ jobs:
         remote_docker_port: "${{ env.CONTAINER_PORT }}"
         remote_docker_username: "${{ env.SSH_USERNAME }}"
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
-        ssh_public_key: "${{ needs.run_test_service.outputs.ssh_server_public_key }}"
         stack_file_path: ./tests/docker-compose.yml
-        stack_name: nginx_1
+        stack_name: nginx
 
-  test2:
+  test_public_key:
     runs-on: ubuntu-latest
-    name: "No pub key"
+    name: "Public key"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
       docker-throw-ssh:
@@ -316,7 +315,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - name: Deployment 2 - No pub key
+    - name: Deployment
       uses: ./
       with:
         deployment_mode: docker-swarm
@@ -324,10 +323,11 @@ jobs:
         remote_docker_port: "${{ env.CONTAINER_PORT }}"
         remote_docker_username: "${{ env.SSH_USERNAME }}"
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
+        ssh_public_key: "${{ needs.run_test_service.outputs.ssh_server_public_key }}"
         stack_file_path: ./tests/docker-compose.yml
-        stack_name: nginx_2
+        stack_name: nginx
 
-  test3:
+  test_background_deploy:
     runs-on: ubuntu-latest
     name: "Background deploy"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
@@ -351,7 +351,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - name: Deployment 3 - Background deploy
+    - name: Deployment
       uses: ./
       with:
         deployment_mode: docker-swarm
@@ -359,12 +359,11 @@ jobs:
         remote_docker_port: "${{ env.CONTAINER_PORT }}"
         remote_docker_username: "${{ env.SSH_USERNAME }}"
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
-        ssh_public_key: "${{ needs.run_test_service.outputs.ssh_server_public_key }}"
         stack_file_path: ./tests/docker-compose.yml
-        stack_name: nginx_3
+        stack_name: nginx
         deploy_foreground: false
 
-  test4:
+  test_debug:
     runs-on: ubuntu-latest
     name: "Debug"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
@@ -388,7 +387,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    - name: Deployment 4 - Debug
+    - name: Deployment
       uses: ./
       with:
         deployment_mode: docker-swarm
@@ -396,12 +395,11 @@ jobs:
         remote_docker_port: "${{ env.CONTAINER_PORT }}"
         remote_docker_username: "${{ env.SSH_USERNAME }}"
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
-        ssh_public_key: "${{ needs.run_test_service.outputs.ssh_server_public_key }}"
         stack_file_path: ./tests/docker-compose.yml
-        stack_name: nginx_4
+        stack_name: nginx
         debug: true
 
-  test5:
+  test_secrets:
     runs-on: ubuntu-latest
     name: "Secrets"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
@@ -426,7 +424,7 @@ jobs:
       with:
         fetch-depth: 1
 
-    - name: Deployment 5a - Secrets
+    - name: Deployment 1
       uses: ./
       with:
         deployment_mode: docker-swarm
@@ -434,13 +432,25 @@ jobs:
         remote_docker_port: "${{ env.CONTAINER_PORT }}"
         remote_docker_username: "${{ env.SSH_USERNAME }}"
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
-        ssh_public_key: "${{ needs.run_test_service.outputs.ssh_server_public_key }}"
         stack_file_path: ./tests/docker-compose.yml
-        stack_name: nginx_5
-        debug: true
+        stack_name: nginx
+        debug: true # TODO: remove
+        secrets: web nginx key1 value1 key2 value2
+
+    - name: Deployment 2
+      uses: ./
+      with:
+        deployment_mode: docker-swarm
+        remote_docker_host: "${{ env.CONTAINER_NAME }}"
+        remote_docker_port: "${{ env.CONTAINER_PORT }}"
+        remote_docker_username: "${{ env.SSH_USERNAME }}"
+        ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
+        stack_file_path: ./tests/docker-compose.yml
+        stack_name: nginx
+        debug: true # TODO: remove
         secrets: web nginx_5 key1 value1 key2 value2
 
-    - name: Deployment 5b - Secrets equals
+    - name: Deployment 3
       uses: ./
       with:
         deployment_mode: docker-swarm
@@ -448,13 +458,12 @@ jobs:
         remote_docker_port: "${{ env.CONTAINER_PORT }}"
         remote_docker_username: "${{ env.SSH_USERNAME }}"
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
-        ssh_public_key: "${{ needs.run_test_service.outputs.ssh_server_public_key }}"
         stack_file_path: ./tests/docker-compose.yml
-        stack_name: nginx_5
-        debug: true
-        secrets: web nginx_5 key1 value1 key2 value2
+        stack_name: nginx
+        debug: true # TODO: remove
+        secrets: web nginx key1_b value1_b key2_b value2_b
 
-    - name: Deployment 5c - Secrets change
+    - name: Deployment 4
       uses: ./
       with:
         deployment_mode: docker-swarm
@@ -462,23 +471,8 @@ jobs:
         remote_docker_port: "${{ env.CONTAINER_PORT }}"
         remote_docker_username: "${{ env.SSH_USERNAME }}"
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
-        ssh_public_key: "${{ needs.run_test_service.outputs.ssh_server_public_key }}"
         stack_file_path: ./tests/docker-compose.yml
-        stack_name: nginx_5
-        debug: true
-        secrets: web nginx_5 key1_b value1_b key2_b value2_b
-
-    - name: Deployment 5d - Secrets prune
-      uses: ./
-      with:
-        deployment_mode: docker-swarm
-        remote_docker_host: "${{ env.CONTAINER_NAME }}"
-        remote_docker_port: "${{ env.CONTAINER_PORT }}"
-        remote_docker_username: "${{ env.SSH_USERNAME }}"
-        ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
-        ssh_public_key: "${{ needs.run_test_service.outputs.ssh_server_public_key }}"
-        stack_file_path: ./tests/docker-compose.yml
-        stack_name: nginx_5d
-        debug: true
-        secrets: web nginx_5d key1 value1 key2 value2
+        stack_name: nginx_2
+        debug: true # TODO: remove
+        secrets: web nginx_2 key1 value1 key2 value2
         secrets_prune: true

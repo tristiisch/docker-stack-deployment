@@ -86,7 +86,7 @@ prune_secrets() {
 
 	for secret in $(docker secret ls -q); do
 		if ! echo "$used_secrets" | grep -qw "$secret"; then
-			debug "Removing unused secret: $secret"
+			info "Prune unused secret: $secret"
 			docker secret rm "$secret"
 		fi
 	done
@@ -194,15 +194,19 @@ yq --inplace ".secrets.$secret_name_full.external = true" "$docker_compose_file_
 info "Updating the $service_name service within the docker-compose file with the new secret"
 yq --inplace ".services.$service_name.secrets += [\"$secret_name_full\"]" "$docker_compose_file_path"
 
+if is_debug; then
+	debug "Docker compose file $docker_compose_file_path :"
+	cat "$post_script_path"
+fi
+
 if [ -n "$secrets_obsolete" ]; then
 	info "Implementing post-command to remove previous secrets"
 	debug "Creating post-script folder $POST_SCRIPTS_FOLDER"
 	mkdir -p "$POST_SCRIPTS_FOLDER"
-	post_script_path="$POST_SCRIPTS_FOLDER\docker_secret_rm.sh"
-	debug "Creating post-script file $post_script_path"
+	post_script_path="$POST_SCRIPTS_FOLDER/docker_secret_rm.sh"
+	debug "Post-script file $post_script_path :"
 	touch "$post_script_path"
 	chmod 700 "$post_script_path"
-
 	{
 		echo "#!/bin/sh"
 		echo "set -eux"
@@ -210,6 +214,9 @@ if [ -n "$secrets_obsolete" ]; then
 			echo "docker secret remove \"$obsolete_secret\""
 		done
 	} >> "$post_script_path"
+	if is_debug; then
+		cat "$post_script_path"
+	fi
 fi
 
 info "Completion of Docker secret rotation"
