@@ -150,7 +150,7 @@ info "Calculating hash for secrets"
 dotenv_secret_hash=$(calculate_hash "$dotenv_secret")
 debug "Result: $dotenv_secret_hash"
 
-debug "secret_prune: $secret_prune"
+debug "secret_prune: $secret_prune" # TODO: Remove
 if [ "$secret_prune" = "true" ]; then
 	info "Pruning secrets ..."
 	prune_secrets
@@ -165,7 +165,11 @@ if docker service inspect "$service_fullname" >/dev/null 2>&1; then
 	info "Identifying secrets for removal"
 	secrets_obsolete=$(get_secrets_obsolete "$old_service_sercrets" "$secret_label_hash_name" "$dotenv_secret_hash")
 	if [ "$secrets_obsolete" != "" ]; then
-		info "Secrets to remove: $secrets_obsolete"
+		info "Secrets to remove:"
+		for secret_obsolete in $secrets_obsolete; do
+			printf "\"%s\" " "$secret_obsolete"
+		done
+		printf "\n"
 	fi
 
 	info "Identifying secrets to preserve"
@@ -186,7 +190,7 @@ else
 	secrets_obsolete=""
 fi
 
-info "Generate new secret: $secret_name_full"
+info "Generate new secret: \"$secret_name_full\""
 printf '%b' "$dotenv_secret" | docker secret create "$secret_name_full" -l "$secret_label_hash_name=$dotenv_secret_hash" -
 
 info "Integrating the new secret \"$secret_name_full\" into the docker-compose file"
@@ -205,19 +209,22 @@ if [ -n "$secrets_obsolete" ]; then
 	debug "Creating post-script folder $POST_SCRIPTS_FOLDER"
 	mkdir -p "$POST_SCRIPTS_FOLDER"
 	post_script_path="$POST_SCRIPTS_FOLDER/docker_secret_rm.sh"
-	debug "Post-script file $post_script_path :"
+	debug "Creating post-script file $post_script_path"
 	touch "$post_script_path"
 	chmod 700 "$post_script_path"
 	{
 		echo "#!/bin/sh"
 		echo "set -eux"
 		for obsolete_secret in $secrets_obsolete; do
-			secret_name=$(docker secret inspect "$obsolete_secret" --format '{{.Spec.Name}}')
-			echo "Delete unused secret: $secret_name"
-			echo "docker secret rm \"$obsolete_secret\""
+			info "Secret to remove: $obsolete_secret"
+			echo "secret=\"$obsolete_secret\""
+			echo "secret_name=\$(docker secret inspect \"\$secret\" --format '{{.Spec.Name}}')"
+			echo "echo \"Delete unused secret: \$secret_name\""
+			echo "docker secret rm \"\$secret\""
 		done
 	} >> "$post_script_path"
 	if is_debug; then
+		debug "Post-script file $post_script_path :"
 		cat "$post_script_path"
 	fi
 fi

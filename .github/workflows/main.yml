@@ -424,7 +424,7 @@ jobs:
       with:
         fetch-depth: 1
 
-    - name: Deployment 1
+    - name: Deployment - Add secrets
       uses: ./
       with:
         deployment_mode: docker-swarm
@@ -437,7 +437,7 @@ jobs:
         debug: true # TODO: remove
         secrets: web nginx key1 value1 key2 value2
 
-    - name: Deployment 2
+    - name: Deployment - Reusing secrets
       uses: ./
       with:
         deployment_mode: docker-swarm
@@ -448,9 +448,9 @@ jobs:
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx
         debug: true # TODO: remove
-        secrets: web nginx_5 key1 value1 key2 value2
+        secrets: web nginx key1 value1 key2 value2
 
-    - name: Deployment 3
+    - name: Deployment - Change secrets
       uses: ./
       with:
         deployment_mode: docker-swarm
@@ -463,7 +463,7 @@ jobs:
         debug: true # TODO: remove
         secrets: web nginx key1_b value1_b key2_b value2_b
 
-    - name: Deployment 4
+    - name: Deployment - Prune secrets
       uses: ./
       with:
         deployment_mode: docker-swarm
