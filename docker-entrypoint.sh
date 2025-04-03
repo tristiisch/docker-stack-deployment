@@ -84,7 +84,7 @@ case $INPUT_DEPLOYMENT_MODE in
 	if [ -n "${INPUT_SECRETS+set}" ] && [ -n "$INPUT_SECRETS" ]; then
 		POST_SCRIPTS_FOLDER="/opt/scripts/post"
 		export POST_SCRIPTS_FOLDER
-		"$WORKDIR/scripts/docker_secrets.sh" "$INPUT_STACK_FILE_PATH" "$INPUT_STACK_NAME" "$INPUT_SECRETS_PRUNE" $INPUT_SECRETS
+		"$WORKDIR/scripts/docker_secrets.sh" "$INPUT_STACK_FILE_PATH" "$INPUT_STACK_NAME" "$INPUT_SECRETS_DELETE_OLD" "$INPUT_SECRETS_PRUNE" $INPUT_SECRETS
 	fi
 
 	"$WORKDIR/scripts/docker_swarm.sh"

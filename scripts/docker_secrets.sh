@@ -128,15 +128,16 @@ fi
 
 docker_compose_file_path=$1
 stack_name=$2
-secret_prune=$3
-service_name=$4
-secret_name=$5
+secret_delete_old=$3
+secret_prune=$4
+service_name=$5
+secret_name=$6
 service_fullname=${stack_name}_${service_name}
 
 secret_name_suffix=$(openssl rand -hex 2)
 secret_name_full="${secret_name}_${secret_name_suffix}"
 secret_values=""
-secret_start_after=5
+secret_start_after=6
 secret_label_hash_name="hash"
 secret_label_name="name"
 
@@ -176,18 +177,18 @@ fi
 
 # Check if the service exists; if not, there are no old secrets to handle.
 if docker service inspect "$service_fullname" >/dev/null 2>&1; then
-	info "Fetching the current secrets for service $service_fullname"
+	info "Fetching all secrets for service $service_fullname"
 	old_service_secrets=$(get_service_secrets "$service_fullname")
-	debug "Current secrets for service $service_fullname: $old_service_secrets"
+	debug "All secrets for service $service_fullname: $old_service_secrets"
 
-	# TODO: test
+	# TODO: test more than one secret
 	info "Fetching the secrets with name $secret_name for service $service_fullname"
 	old_service_secrets=$(get_secrets_with_name "$old_service_secrets" "$secret_label_name" "$secret_name")
-	debug "Current secrets for service $service_fullname with name $secret_name: $old_service_secrets"
+	debug "Secrets with name $secret_name for service $service_fullname: $old_service_secrets"
 
 	info "Identifying secrets for removal"
 	secrets_obsolete=$(get_secrets_obsolete "$old_service_secrets" "$secret_label_hash_name" "$dotenv_secret_hash")
-	if [ "$secrets_obsolete" != "" ]; then
+	if [ -n "$secrets_obsolete" ]; then
 		info "Secrets to remove:"
 		for secret_obsolete in $secrets_obsolete; do
 			printf "\"%s\" " "$secret_obsolete"
@@ -233,26 +234,34 @@ if is_debug; then
 fi
 
 if [ -n "$secrets_obsolete" ]; then
-	info "Implementing post-command to remove previous secrets"
-	debug "Creating post-script folder $POST_SCRIPTS_FOLDER"
-	mkdir -p "$POST_SCRIPTS_FOLDER"
-	post_script_path="$POST_SCRIPTS_FOLDER/docker_secret_rm.sh"
-	debug "Creating post-script file $post_script_path"
-	touch "$post_script_path"
-	chmod 700 "$post_script_path"
-	{
-		echo "#!/bin/sh"
-		echo "set -eux"
-		for obsolete_secret in $secrets_obsolete; do
-			echo "secret=\"$obsolete_secret\""
-			echo "secret_name=\$(docker secret inspect \"\$secret\" --format '{{.Spec.Name}}')"
-			echo "echo \"Delete unused secret: \$secret_name\""
-			echo "docker secret rm \"\$secret\""
+	if [ "$secret_delete_old" = "true" ]; then
+		info "Implementing post-command to delete previous secrets"
+		debug "Creating post-script folder $POST_SCRIPTS_FOLDER"
+		mkdir -p "$POST_SCRIPTS_FOLDER"
+		post_script_path="$POST_SCRIPTS_FOLDER/docker_secret_rm.sh"
+		debug "Creating post-script file $post_script_path"
+		touch "$post_script_path"
+		chmod 700 "$post_script_path"
+		{
+			echo "#!/bin/sh"
+			echo "set -eux"
+			for obsolete_secret in $secrets_obsolete; do
+				echo "secret=\"$obsolete_secret\""
+				echo "secret_name=\$(docker secret inspect \"\$secret\" --format '{{.Spec.Name}}')"
+				echo "echo \"Delete unused secret: \$secret_name\""
+				echo "docker secret rm \"\$secret\""
+			done
+		} >> "$post_script_path"
+		if is_debug; then
+			debug "Post-script file $post_script_path :"
+			cat "$post_script_path"
+		fi
+	else
+		info "Secrets not deleted because of secret deletion policy :"
+		for secret_obsolete in $secrets_obsolete; do
+			printf "\"%s\" " "$secret_obsolete"
 		done
-	} >> "$post_script_path"
-	if is_debug; then
-		debug "Post-script file $post_script_path :"
-		cat "$post_script_path"
+		printf "\n"
 	fi
 fi
 

@@ -45,6 +45,9 @@ inputs:
     default: true
   secrets:
     description: 'Update Docker Secret using rotation during stack update. The format is: service_name secret_name key1 value1 key2 value2 ...'
+  secrets_delete_old:
+    description: 'Remove any replaced secrets during stack update (default: true).'
+    default: true
   secrets_prune:
     description: 'Remove all unused Docker secrets (default: false).'
     default: false
