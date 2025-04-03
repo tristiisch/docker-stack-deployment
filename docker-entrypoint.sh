@@ -84,7 +84,7 @@ case $INPUT_DEPLOYMENT_MODE in
 	if [ -n "${INPUT_SECRETS+set}" ] && [ -n "$INPUT_SECRETS" ]; then
 		POST_SCRIPTS_FOLDER="/opt/scripts/post"
 		export POST_SCRIPTS_FOLDER
-		"$WORKDIR/scripts/docker_secrets.sh" "$INPUT_STACK_FILE_PATH" "$INPUT_STACK_NAME" $INPUT_SECRETS
+		"$WORKDIR/scripts/docker_secrets.sh" "$INPUT_STACK_FILE_PATH" "$INPUT_STACK_NAME" "$INPUT_SECRETS_DELETE_OLD" "$INPUT_SECRETS_PRUNE" $INPUT_SECRETS
 	fi
 
 	"$WORKDIR/scripts/docker_swarm.sh"
@@ -98,7 +98,11 @@ esac
 
 # Execute post commands if any
 if [ -n "$POST_SCRIPTS_FOLDER" ] && [ -d "$POST_SCRIPTS_FOLDER" ]; then
-	find "$POST_SCRIPTS_FOLDER" -type f -executable -exec sh {} \;
+	debug "Execute post scripts in $POST_SCRIPTS_FOLDER ..."
+    find "$POST_SCRIPTS_FOLDER" -type f -executable | while read -r script; do
+        info "Execute post script $script ..."
+        sh "$script"
+    done
 fi
 
 # Delete temp file

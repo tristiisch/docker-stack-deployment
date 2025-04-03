@@ -9,18 +9,28 @@ DEPLOYMENT_COMMAND="docker$DOCKER_OPTIONS stack deploy"
 if [ -n "$INPUT_DOCKER_REMOVE_ORPHANS" ] && [ "$INPUT_DOCKER_REMOVE_ORPHANS" = "true" ] ; then
 	DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND --prune"
 fi
-if [ "$INPUT_DEPLOY_FOREGROUND" = "true" ] ; then
-	DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND --detach=false"
-elif [ "$INPUT_DEPLOY_FOREGROUND" = "false" ] ; then
-	DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND --detach=true"
-fi
 
 if [ -n "$INPUT_DOCKER_PRUNE" ] && [ "$INPUT_DOCKER_PRUNE" = "true" ] ; then
 	info "Cleaning up Docker resources with pruning"
 	yes | docker "$DOCKER_OPTIONS" system prune -a 2>&1
 fi
 
+info "Checking remote docker version"
+execute_ssh_raw "docker --version"
+docker_version=$(echo "$EXECUTE_SSH_RAW_OUTPUT" | cut -d ' ' -f 3 | cut -d '.' -f 1)
+info "Remote docker version is $docker_version"
+
 if [ "$INPUT_COPY_STACK_FILE" = "true" ] ; then
+	if [ "$docker_version" -ge 26 ]; then
+		if [ "$INPUT_DEPLOY_FOREGROUND" = "true" ] ; then
+			DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND --detach=false"
+		elif [ "$INPUT_DEPLOY_FOREGROUND" = "false" ] ; then
+			DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND --detach=true"
+		fi
+	elif [ "$INPUT_DEPLOY_FOREGROUND" = "true" ]; then
+		warning "Cannot deploy in foreground, it require Docker version 26, but you use Docker version $docker_version"
+	fi
+
 	STACK_FINAL_PATH="$INPUT_DEPLOY_PATH/$STACK_LOCAL_FILE"
 	DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND -c \"$STACK_FINAL_PATH\""
 
@@ -41,6 +51,11 @@ if [ "$INPUT_COPY_STACK_FILE" = "true" ] ; then
 	execute_ssh "$DEPLOYMENT_COMMAND $INPUT_STACK_NAME $INPUT_ARGS" 2>&1
 
 else
+	if [ "$INPUT_DEPLOY_FOREGROUND" = "true" ] ; then
+		DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND --detach=false"
+	elif [ "$INPUT_DEPLOY_FOREGROUND" = "false" ] ; then
+		DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND --detach=true"
+	fi
 	DEPLOYMENT_COMMAND="$DEPLOYMENT_COMMAND -c \"$INPUT_STACK_FILE_PATH\""
 
 	info "Executing command on $DOCKER_USER_HOST"
