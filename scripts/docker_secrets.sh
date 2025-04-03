@@ -104,7 +104,7 @@ prune_secrets() {
 	for secret in $(docker secret ls -q); do
 		if ! echo "$used_secrets" | grep -qw "$secret"; then
 			secret_name=$(docker secret inspect "$secret" --format '{{.Spec.Name}}')
-			info "Prune unused secret: $secret_name"
+			info "Prune unused secret: \"$secret_name\""
 			docker secret rm "$secret"
 		fi
 	done
@@ -182,9 +182,9 @@ if docker service inspect "$service_fullname" >/dev/null 2>&1; then
 	debug "All secrets for service $service_fullname: $old_service_secrets"
 
 	# TODO: test more than one secret
-	info "Fetching the secrets with name $secret_name for service $service_fullname"
+	info "Fetching the secrets with name \"$secret_name\" for service $service_fullname"
 	old_service_secrets=$(get_secrets_with_name "$old_service_secrets" "$secret_label_name" "$secret_name")
-	debug "Secrets with name $secret_name for service $service_fullname: $old_service_secrets"
+	debug "Secrets with name \"$secret_name\" for service $service_fullname: $old_service_secrets"
 
 	info "Identifying secrets for removal"
 	secrets_obsolete=$(get_secrets_obsolete "$old_service_secrets" "$secret_label_hash_name" "$dotenv_secret_hash")
