@@ -6,7 +6,8 @@ get_service_secrets() {
 	service_name=$1
 
 	return_secrets=""
-	secrets=$(docker service inspect --format '{{ range .Spec.TaskTemplate.ContainerSpec.Secrets }}{{ .SecretName }} {{ end }}' "$service_name")
+	secrets=$(docker service inspect --format '{{ range .Spec.TaskTemplate.ContainerSpec.Secrets }}{{ .SecretName }} {{ end }}' "$service_name") # TODO use id
+	# secrets=$(docker service inspect --format '{{ range .Spec.TaskTemplate.ContainerSpec.Secrets }}{{ .SecretID }} {{ end }}' "$service_name")
 	for secret in $secrets; do
 		return_secrets="$return_secrets$secret "
 	done
@@ -41,6 +42,22 @@ is_secret_exists() {
 		fi
 	done
 	return 1
+}
+
+get_secrets_with_name() {
+	old_service_secrets="$1"
+	secret_label_name="$2"
+	name_to_retrieve="$3"
+	secrets_with_name=""
+	new_line=$(printf '\n')
+
+	for secret in $old_service_secrets; do
+		old_hash=$(docker secret inspect "$secret" --format="{{index .Spec.Labels \"$secret_label_name\"}}")
+		if [ -n "$old_hash" ] && printf "%s" "$old_hash" | grep -q "$new_line" && [ "$old_hash" = "$name_to_retrieve" ]; then
+			secrets_with_name="$secrets_with_name$secret "
+		fi
+	done
+	echo "$secrets_with_name"
 }
 
 get_secrets_obsolete() {
@@ -80,9 +97,9 @@ prune_secrets() {
 		echo "jq is not installed. Please install it to prune secrets."
 		exit 1
 	fi
-	debug "all_secrets: $(docker secret ls -q)"
+	debug "all_secrets: $(docker secret ls -q)" # TODO: use secret name
 	used_secrets=$(docker service ls -q | xargs -I {} docker service inspect {} --format '{{json .Spec.TaskTemplate.ContainerSpec.Secrets}}' | jq -r 'select(. != null) | .[].SecretID' | sort -u)
-	debug "used_secrets: $used_secrets"
+	debug "used_secrets: $used_secrets" # TODO: use secret name
 
 	for secret in $(docker secret ls -q); do
 		if ! echo "$used_secrets" | grep -qw "$secret"; then
@@ -121,6 +138,7 @@ secret_name_full="${secret_name}_${secret_name_suffix}"
 secret_values=""
 secret_start_after=5
 secret_label_hash_name="hash"
+secret_label_name="name"
 
 # Check if there are enough arguments for key-value pairs
 num_args=$(($# - secret_start_after))
@@ -156,11 +174,16 @@ if [ "$secret_prune" = "true" ]; then
 	prune_secrets
 fi
 
-# Check if service exists
+# Check if the service exists; if not, there are no old secrets to handle.
 if docker service inspect "$service_fullname" >/dev/null 2>&1; then
 	info "Fetching the current secrets for service $service_fullname"
 	old_service_secrets=$(get_service_secrets "$service_fullname")
-	debug "Result: $old_service_secrets"
+	debug "Current secrets for service $service_fullname: $old_service_secrets"
+
+	# TODO: test
+	info "Fetching the secrets with name $secret_name for service $service_fullname"
+	old_service_secrets=$(get_secrets_with_name "$old_service_secrets" "$secret_label_name" "$secret_name")
+	debug "Current secrets for service $service_fullname with name $secret_name: $old_service_secrets"
 
 	info "Identifying secrets for removal"
 	secrets_obsolete=$(get_secrets_obsolete "$old_service_secrets" "$secret_label_hash_name" "$dotenv_secret_hash")
@@ -182,6 +205,11 @@ if docker service inspect "$service_fullname" >/dev/null 2>&1; then
 		yq --inplace ".services.$service_name.secrets += [\"$secret_preserve\"]" "$docker_compose_file_path"
 	done
 
+	if is_debug; then
+		debug "Docker compose file $docker_compose_file_path :"
+		cat "$docker_compose_file_path"
+	fi
+
 	if is_secret_exists "$old_service_secrets" "$secret_label_hash_name" && [ "$secrets_obsolete" = "" ]; then
 		info "Secret rotation not needed"
 		return
@@ -191,7 +219,7 @@ else
 fi
 
 info "Generate new secret: \"$secret_name_full\""
-printf '%b' "$dotenv_secret" | docker secret create "$secret_name_full" -l "$secret_label_hash_name=$dotenv_secret_hash" -
+printf '%b' "$dotenv_secret" | docker secret create "$secret_name_full" -l "$secret_label_name=$secret_name" -l "$secret_label_hash_name=$dotenv_secret_hash" -
 
 info "Integrating the new secret \"$secret_name_full\" into the docker-compose file"
 yq --inplace ".secrets.$secret_name_full.external = true" "$docker_compose_file_path"
