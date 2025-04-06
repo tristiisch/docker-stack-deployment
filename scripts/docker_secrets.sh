@@ -128,7 +128,7 @@ prune_secrets() {
 get_secret_name() {
 	secret=$1
 	secret_name=$(docker secret inspect "$secret" --format '{{.Spec.Name}}')
-	return "$secret_name"
+	echo "$secret_name"
 }
 
 if ! command -v yq >/dev/null 2>&1; then
