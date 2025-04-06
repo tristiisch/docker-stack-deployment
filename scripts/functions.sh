@@ -22,15 +22,15 @@ setup_ssh() {
 	mkdir -p "$SSH_FOLDER"
 	chmod 700 "$SSH_FOLDER"
 	if is_debug; then
-		debug "Verify permission on ssh folder"
-		ls -l "$SSH_FOLDER"
+		debug "Checking permissions on SSH folder at $SSH_FOLDER"
+		ls -ld "$SSH_FOLDER"
 	fi
 
 	info "Registering SSH key"
 	printf '%s\n' "$INPUT_SSH_PRIVATE_KEY" > "$KEY_PATH"
 	chmod 600 "$KEY_PATH"
 	if is_debug; then
-		debug "Verify permission on private key"
+		debug "Checking permissions on private key at $KEY_PATH"
 		ls -l "$KEY_PATH"
 	fi
 
@@ -63,15 +63,19 @@ EOF
 			ls -l "$KNOWN_HOST_PATH"
 		fi
 
-		KNOWN_HOST=$(cat "$KNOWN_HOST_PATH")
-		debug "$KNOWN_HOST_PATH :" "$KNOWN_HOST"
+		if is_debug; then
+			debug "SSH known host $KNOWN_HOST_PATH :"
+			cat "$KNOWN_HOST_PATH"
+		fi
 	fi
 	printf '	StrictHostKeyChecking %s\n' $STRICT_HOST >> "$SSH_CONFIG_PATH"
-	SSH_CONFIG=$(cat "$SSH_CONFIG_PATH")
-	debug "$SSH_CONFIG_PATH :" "$SSH_CONFIG"
+	if is_debug; then
+		debug "SSH config $SSH_CONFIG_PATH :"
+		cat "$SSH_CONFIG_PATH"
+	fi
 
 	info "Testing SSH connection ..."
-	if is_debug; then
+	if is_running_debug; then
 		ssh -v -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
 	else
 		ssh -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
@@ -98,17 +102,25 @@ setup_remote_docker() {
 execute_ssh(){
 	SSH_PORT=$INPUT_REMOTE_DOCKER_PORT
 	verbose_arg=""
-	if is_debug; then
+	if is_running_debug; then
 		verbose_arg="-v"
 	fi
-	debug "Execute Over SSH : $ $*"
+	debug "Execute over SSH : $ $*"
 	ssh $verbose_arg -p "$SSH_PORT" "$DOCKER_USER_HOST" "$@" 2>&1
+}
+
+execute_ssh_raw(){
+	SSH_PORT=$INPUT_REMOTE_DOCKER_PORT
+	debug "Execute over SSH with raw response : $ $*"
+	output=$(ssh -p "$SSH_PORT" "$DOCKER_USER_HOST" "$@")
+	debug "Output : $output"
+	export EXECUTE_SSH_RAW_OUTPUT="$output"
 }
 
 copy_ssh(){
 	SSH_PORT=$INPUT_REMOTE_DOCKER_PORT
 	verbose_arg=""
-	if is_debug; then
+	if is_running_debug; then
 		verbose_arg="-v"
 	fi
 	local_file="$1"
@@ -119,6 +131,13 @@ copy_ssh(){
 
 is_debug() {
 	if { [ -z "${INPUT_DEBUG+set}" ] || [ "$INPUT_DEBUG" != "true" ]; } && { [ -z "${RUNNER_DEBUG+set}" ] || [ "$RUNNER_DEBUG" != "1" ]; }; then
+		return 1
+	fi
+	return 0
+}
+
+is_running_debug() {
+	if [ -z "${RUNNER_DEBUG+set}" ] || [ "$RUNNER_DEBUG" != "1" ]; then
 		return 1
 	fi
 	return 0
