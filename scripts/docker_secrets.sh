@@ -6,8 +6,6 @@ get_service_secrets() {
 	service_name=$1
 
 	return_secrets=""
-	# secrets=$(docker service inspect --format '{{ range .Spec.TaskTemplate.ContainerSpec.Secrets }}{{ .SecretName }} {{ end }}' "$service_name")
-	# TODO: verify if secret ID works
 	secrets=$(docker service inspect --format '{{ range .Spec.TaskTemplate.ContainerSpec.Secrets }}{{ .SecretID }} {{ end }}' "$service_name") 
 	for secret in $secrets; do
 		return_secrets="$return_secrets$secret "
