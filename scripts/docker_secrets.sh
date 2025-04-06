@@ -6,8 +6,9 @@ get_service_secrets() {
 	service_name=$1
 
 	return_secrets=""
-	secrets=$(docker service inspect --format '{{ range .Spec.TaskTemplate.ContainerSpec.Secrets }}{{ .SecretName }} {{ end }}' "$service_name") # TODO use id
-	# secrets=$(docker service inspect --format '{{ range .Spec.TaskTemplate.ContainerSpec.Secrets }}{{ .SecretID }} {{ end }}' "$service_name")
+	# secrets=$(docker service inspect --format '{{ range .Spec.TaskTemplate.ContainerSpec.Secrets }}{{ .SecretName }} {{ end }}' "$service_name")
+	# TODO: verify if secret ID works
+	secrets=$(docker service inspect --format '{{ range .Spec.TaskTemplate.ContainerSpec.Secrets }}{{ .SecretID }} {{ end }}' "$service_name") 
 	for secret in $secrets; do
 		return_secrets="$return_secrets$secret "
 	done
@@ -97,17 +98,37 @@ prune_secrets() {
 		echo "jq is not installed. Please install it to prune secrets."
 		exit 1
 	fi
-	debug "all_secrets: $(docker secret ls -q)" # TODO: use secret name
+	if is_debug; then
+		debug "All secrets :"
+		for all_secret in $(docker secret ls -q); do
+			all_secret_name=$(get_secret_name "$all_secret")
+			printf "\"%s\" " "$all_secret_name"
+		done
+		printf "\n"
+	fi
 	used_secrets=$(docker service ls -q | xargs -I {} docker service inspect {} --format '{{json .Spec.TaskTemplate.ContainerSpec.Secrets}}' | jq -r 'select(. != null) | .[].SecretID' | sort -u)
-	debug "used_secrets: $used_secrets" # TODO: use secret name
+	if is_debug; then
+		debug "Secrets currently used :"
+		for used_secret in $used_secrets; do
+			used_secret_name=$(get_secret_name "$used_secret")
+			printf "\"%s\" " "$used_secret_name"
+		done
+		printf "\n"
+	fi
 
 	for secret in $(docker secret ls -q); do
 		if ! echo "$used_secrets" | grep -qw "$secret"; then
-			secret_name=$(docker secret inspect "$secret" --format '{{.Spec.Name}}')
+			secret_name=$(get_secret_name "$secret")
 			info "Prune unused secret: \"$secret_name\""
 			docker secret rm "$secret"
 		fi
 	done
+}
+
+get_secret_name() {
+	secret=$1
+	secret_name=$(docker secret inspect "$secret" --format '{{.Spec.Name}}')
+	return "$secret_name"
 }
 
 if ! command -v yq >/dev/null 2>&1; then
@@ -169,7 +190,6 @@ info "Calculating hash for secrets"
 dotenv_secret_hash=$(calculate_hash "$dotenv_secret")
 debug "Secret hash: $dotenv_secret_hash"
 
-debug "secret_prune: $secret_prune" # TODO: Remove
 if [ "$secret_prune" = "true" ]; then
 	info "Pruning secrets ..."
 	prune_secrets
@@ -177,14 +197,28 @@ fi
 
 # Check if the service exists; if not, there are no old secrets to handle.
 if docker service inspect "$service_fullname" >/dev/null 2>&1; then
-	info "Fetching all secrets for service $service_fullname"
+	info "Fetching all secrets for service \"$service_fullname\""
 	old_service_secrets=$(get_service_secrets "$service_fullname")
-	debug "All secrets for service $service_fullname: $old_service_secrets"
+	if is_debug; then
+		debug "Secrets used by service \"$service_fullname\":"
+		for used_secret in $old_service_secrets; do
+			used_secret_name=$(get_secret_name "$used_secret")
+			printf "\"%s\" " "$used_secret_name"
+		done
+		printf "\n"
+	fi
 
 	# TODO: test more than one secret
-	info "Fetching the secrets with name \"$secret_name\" for service $service_fullname"
+	info "Fetching the secrets with name \"$secret_name\" for service \"$service_fullname\""
 	old_service_secrets=$(get_secrets_with_name "$old_service_secrets" "$secret_label_name" "$secret_name")
-	debug "Secrets with name \"$secret_name\" for service $service_fullname: $old_service_secrets"
+	if is_debug; then
+		debug "Secrets with name \"$secret_name\" used by service \"$service_fullname\":"
+		for used_secret in $old_service_secrets; do
+			used_secret_name=$(get_secret_name "$used_secret")
+			printf "\"%s\" " "$used_secret_name"
+		done
+		printf "\n"
+	fi
 
 	info "Identifying secrets for removal"
 	secrets_obsolete=$(get_secrets_obsolete "$old_service_secrets" "$secret_label_hash_name" "$dotenv_secret_hash")
@@ -199,11 +233,12 @@ if docker service inspect "$service_fullname" >/dev/null 2>&1; then
 	info "Identifying secrets to preserve"
 	secrets_preserves=$(get_secrets_to_preserve "$old_service_secrets" "$secret_label_hash_name" "$dotenv_secret_hash")
 	for secret_preserve in $secrets_preserves; do
-		info "Preserve the old secret \"$secret_preserve\" into the docker-compose file"
-		yq --inplace ".secrets.$secret_preserve.external = true" "$docker_compose_file_path"
+		secret_preserve_name=$(get_secret_name "$secret_preserve")
+		info "Preserve the old secret \"$secret_preserve_name\" into the docker-compose file"
+		yq --inplace ".secrets.$secret_preserve_name.external = true" "$docker_compose_file_path"
 
-		info "Updating the $service_name service within the docker-compose file with the old secret"
-		yq --inplace ".services.$service_name.secrets += [\"$secret_preserve\"]" "$docker_compose_file_path"
+		info "Updating the \"$service_name\" service within the docker-compose file with the old secret"
+		yq --inplace ".services.$service_name.secrets += [\"$secret_preserve_name\"]" "$docker_compose_file_path"
 	done
 
 	if is_debug; then
