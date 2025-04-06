@@ -23,7 +23,7 @@ setup_ssh() {
 	chmod 700 "$SSH_FOLDER"
 	if is_debug; then
 		debug "Checking permissions on SSH folder at $SSH_FOLDER"
-		ls -l "$SSH_FOLDER"
+		ls -ld "$SSH_FOLDER"
 	fi
 
 	info "Registering SSH key"
@@ -102,7 +102,7 @@ setup_remote_docker() {
 execute_ssh(){
 	SSH_PORT=$INPUT_REMOTE_DOCKER_PORT
 	verbose_arg=""
-	if is_debug; then
+	if is_running_debug; then
 		verbose_arg="-v"
 	fi
 	debug "Execute over SSH : $ $*"
@@ -120,7 +120,7 @@ execute_ssh_raw(){
 copy_ssh(){
 	SSH_PORT=$INPUT_REMOTE_DOCKER_PORT
 	verbose_arg=""
-	if is_debug; then
+	if is_running_debug; then
 		verbose_arg="-v"
 	fi
 	local_file="$1"
@@ -131,6 +131,13 @@ copy_ssh(){
 
 is_debug() {
 	if { [ -z "${INPUT_DEBUG+set}" ] || [ "$INPUT_DEBUG" != "true" ]; } && { [ -z "${RUNNER_DEBUG+set}" ] || [ "$RUNNER_DEBUG" != "1" ]; }; then
+		return 1
+	fi
+	return 0
+}
+
+is_running_debug() {
+	if [ -z "${RUNNER_DEBUG+set}" ] || [ "$RUNNER_DEBUG" != "1" ]; then
 		return 1
 	fi
 	return 0
