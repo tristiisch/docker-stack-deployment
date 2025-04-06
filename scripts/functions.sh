@@ -75,7 +75,7 @@ EOF
 	fi
 
 	info "Testing SSH connection ..."
-	if is_debug; then
+	if is_running_debug; then
 		ssh -v -p "$SSH_PORT" "$DOCKER_USER_HOST" exit
 	else
 		ssh -p "$SSH_PORT" "$DOCKER_USER_HOST" exit

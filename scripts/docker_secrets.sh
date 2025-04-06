@@ -225,7 +225,8 @@ if docker service inspect "$service_fullname" >/dev/null 2>&1; then
 	if [ -n "$secrets_obsolete" ]; then
 		info "Secrets to remove:"
 		for secret_obsolete in $secrets_obsolete; do
-			printf "\"%s\" " "$secret_obsolete"
+			secret_obsolete_name=$(get_secret_name "$secret_obsolete")
+			printf "\"%s\" " "$secret_obsolete_name"
 		done
 		printf "\n"
 	fi
@@ -279,7 +280,11 @@ if [ -n "$secrets_obsolete" ]; then
 		chmod 700 "$post_script_path"
 		{
 			echo "#!/bin/sh"
-			echo "set -eux"
+			if ! is_debug; then
+				echo "set -eu"
+			else
+				echo "set -eux"
+			fi
 			for obsolete_secret in $secrets_obsolete; do
 				echo "secret=\"$obsolete_secret\""
 				echo "secret_name=\$(docker secret inspect \"\$secret\" --format '{{.Spec.Name}}')"
@@ -294,7 +299,8 @@ if [ -n "$secrets_obsolete" ]; then
 	else
 		info "Secrets not deleted because of secret deletion policy :"
 		for secret_obsolete in $secrets_obsolete; do
-			printf "\"%s\" " "$secret_obsolete"
+			secret_obsolete_name=$(get_secret_name "$secret_obsolete")
+			printf "\"%s\" " "$secret_obsolete_name"
 		done
 		printf "\n"
 	fi
