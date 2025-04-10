@@ -82,6 +82,7 @@ jobs:
   build_base_service:
     runs-on: ubuntu-latest
     name: "Build base service"
+    needs: ["utils"]
     permissions:
       packages: write
     steps:
@@ -106,7 +107,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_BASE_NAME }}
           tags: |
-            type=sha,priority=100,prefix=test-,suffix=,format=short
+            type=raw,value=commit-${{ needs.utils.outputs.short_sha }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build initial Docker image for SSHD service in DinD
@@ -145,7 +146,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_TEST_NAME }}
           tags: |
-            type=sha,priority=100,prefix=test-,suffix=,format=short
+            type=raw,value=commit-${{ needs.utils.outputs.short_sha }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build test Docker image for SSHD service in DinD
