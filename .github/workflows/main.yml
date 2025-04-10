@@ -16,14 +16,14 @@ env:
   KNOWN_HOST_PATH: "/tmp/ssh/known_host"
   SSH_USERNAME: "deploy"
   IMAGE_BASE_PATH: "./tests/host/Dockerfile"
-  IMAGE_BASE_NAME: "ghcr.io/tristiisch/docker_throw_ssh"
+  IMAGE_BASE_NAME: "ghcr.io/tristiisch/docker_through_ssh"
   IMAGE_TEST_PATH: "./tests/host/with_key/Dockerfile"
   IMAGE_TEST_CONTEXT: "./tests/host/with_key"
-  IMAGE_TEST_NAME: "ghcr.io/tristiisch/docker_throw_ssh_with_key"
-  IMAGE_TEST_TAR: "docker_throw_ssh_with_key.tar"
-  IMAGE_TEST_TAR_PATH: "./docker_throw_ssh_with_key.tar"
-  IMAGE_TEST_ARTIFACT_NAME: "docker-throw-ssh"
-  CONTAINER_NAME: "docker-throw-ssh"
+  IMAGE_TEST_NAME: "ghcr.io/tristiisch/docker_through_ssh_with_key"
+  IMAGE_TEST_TAR: "docker_through_ssh_with_key.tar"
+  IMAGE_TEST_TAR_PATH: "./docker_through_ssh_with_key.tar"
+  IMAGE_TEST_ARTIFACT_NAME: "docker-through-ssh"
+  CONTAINER_NAME: "docker-through-ssh"
   CONTAINER_PORT: "22"
   CONTAINER_HOST_NAME: "localhost"
   CONTAINER_HOST_PORT: "2222"
@@ -82,6 +82,8 @@ jobs:
   build_base_service:
     runs-on: ubuntu-latest
     name: "Build base service"
+    permissions:
+      packages: write
     steps:
 
       - uses: actions/checkout@v4
@@ -167,8 +169,8 @@ jobs:
     outputs:
       ssh_server_public_key: ${{ steps.get_ssh_public_key.outputs.value }}
     services:
-      docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+      docker-through-ssh:
+        image: "ghcr.io/tristiisch/docker_through_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -261,8 +263,8 @@ jobs:
     name: "Basic"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
-      docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+      docker-through-ssh:
+        image: "ghcr.io/tristiisch/docker_through_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -296,8 +298,8 @@ jobs:
     name: "Public key"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
-      docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+      docker-through-ssh:
+        image: "ghcr.io/tristiisch/docker_through_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -332,8 +334,8 @@ jobs:
     name: "Background deploy"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
-      docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+      docker-through-ssh:
+        image: "ghcr.io/tristiisch/docker_through_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -368,8 +370,8 @@ jobs:
     name: "Debug"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
-      docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+      docker-through-ssh:
+        image: "ghcr.io/tristiisch/docker_through_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -404,8 +406,8 @@ jobs:
     name: "Secrets"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
-      docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+      docker-through-ssh:
+        image: "ghcr.io/tristiisch/docker_through_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -485,3 +487,14 @@ jobs:
         stack_name: nginx_2
         secrets: web secrets_env_2 key1 value1 key2 value2
         secrets_prune: true
+
+  cleanup:
+    runs-on: ubuntu-latest
+    name: "Cleanup"
+    needs: ["utils", "test_basic", "test_public_key", "test_background_deploy", "test_debug", "test_secrets"]
+    permissions:
+      packages: write
+    steps:
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          delete-tags: ${{ env.IMAGE_BASE_NAME }}:test-${{ needs.utils.outputs.short_sha }},${{ env.IMAGE_TEST_NAME }}:test-${{ needs.utils.outputs.short_sha }}

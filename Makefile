@@ -33,8 +33,8 @@ dev: start-f exec
 # --
 
 tests-build:
-	@docker build -f ./tests/host/Dockerfile -t docker_throw_ssh .
+	@docker build -f ./tests/host/Dockerfile -t docker_through_ssh .
 
 tests-deploy: tests-build
-	@docker tag docker_throw_ssh ghcr.io/tristiisch/docker_throw_ssh:latest
-	@docker push ghcr.io/tristiisch/docker_throw_ssh:latest
+	@docker tag docker_through_ssh ghcr.io/tristiisch/docker_through_ssh:latest
+	@docker push ghcr.io/tristiisch/docker_through_ssh:latest
