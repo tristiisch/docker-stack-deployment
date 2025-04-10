@@ -58,8 +58,7 @@ jobs:
           mkdir -p "$DIR_PATH"
           chmod 700 "$DIR_PATH"
       - name: Generate SSH key pair
-        run: |
-          ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PRIVATE_PATH }}" -N "" -o -a 100
+        run: ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PRIVATE_PATH }}" -N "" -o -a 100
       - name: Retrieve public key
         id: ssh_key_public
         run: |
@@ -497,4 +496,7 @@ jobs:
     steps:
       - uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          delete-tags: ${{ env.IMAGE_BASE_NAME }}:test-${{ needs.utils.outputs.short_sha }},${{ env.IMAGE_TEST_NAME }}:test-${{ needs.utils.outputs.short_sha }}
+          packages: ${{ env.IMAGE_BASE_NAME }},${{ env.IMAGE_TEST_NAME }}
+          delete-tags: test-${{ needs.utils.outputs.short_sha }}
+          delete-untagged: true
+          delete-ghost-images: true
