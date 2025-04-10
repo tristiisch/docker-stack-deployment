@@ -8,7 +8,7 @@ Below is a concise example demonstrating the utilization of this action:
 
 ```yaml
 - name: Deploy to Docker
-  uses: tristiisch/docker-stack-deployment@v2
+  uses: tristiisch/docker-stack-deployment@v2.3
   with:
     remote_docker_host: 203.0.113.0
     remote_docker_username: johndoe
@@ -21,8 +21,9 @@ Below is a concise example demonstrating the utilization of this action:
     keep_files: 5
     docker_remove_orphans: true
     stack_name: stack-name
-    args: ""
     secrets: compose-service-name secret-prefix VAR_KEY_1 var_value_1 VAR_KEY_2 var_value_2
+	secrets_prune: false
+    args: ""
 ```
 
 ## Input Configurations
@@ -112,6 +113,28 @@ Toggle to pull Docker images before deploying. Applicable only for Docker Compos
 ### `stack_name`
 
 Specify the name of the stack. This is only applicable for Docker Swarm.
+
+### `secrets`
+
+Create [Docker Swarm secrets](https://docs.docker.com/compose/how-tos/use-secrets/) for a specific service.  
+Each secret will be mounted inside the container at `/run/secrets/<secret_name>` with content like:
+
+```
+VAR_KEY_1=var_value_1
+VAR_KEY_2=var_value_2
+```
+
+**Format of the `secrets` input:**
+
+```yaml
+secrets: <compose-service-name> <secret-prefix> VAR_KEY_1 var_value_1 VAR_KEY_2 var_value_2 ...
+```
+
+- `<compose-service-name>`: name of the service in your `docker-compose.yml`
+- `<secret-prefix>`: prefix added to secret names to avoid collisions
+- Each `VAR_KEY` / `var_value` pair is turned into a Docker secret containing the line `VAR_KEY=var_value`
+- The final secret_name is built using:
+<secret-prefix>-<random> where <random> is a short random string of length 8 to ensure uniqueness
 
 ### `args`
 
