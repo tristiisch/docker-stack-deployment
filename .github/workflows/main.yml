@@ -496,7 +496,7 @@ jobs:
     steps:
       - uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          packages: ${{ env.IMAGE_BASE_NAME }},${{ env.IMAGE_TEST_NAME }}
+          packages: docker_through_ssh,docker_through_ssh_with_key
           delete-tags: test-${{ needs.utils.outputs.short_sha }}
           delete-untagged: true
           delete-ghost-images: true
