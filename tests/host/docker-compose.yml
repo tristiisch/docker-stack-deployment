@@ -1,5 +1,5 @@
 services:
-  docker_throw_ssh:
+  docker_through_ssh:
     build:
       context: .
       dockerfile: ./Dockerfile
