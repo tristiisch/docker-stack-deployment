@@ -153,7 +153,7 @@ service_name=$5
 secret_name=$6
 service_fullname=${stack_name}_${service_name}
 
-secret_name_suffix=$(openssl rand -hex 2)
+secret_name_suffix=$(openssl rand -hex 4)
 secret_name_full="${secret_name}_${secret_name_suffix}"
 secret_values=""
 secret_start_after=6
