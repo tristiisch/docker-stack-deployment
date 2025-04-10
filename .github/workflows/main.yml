@@ -8,6 +8,7 @@ on:
     types: [opened, synchronize]
     branches:
       - "*"
+  workflow_dispatch:
 
 env:
   SSH_KEY_TYPE: "ed25519"
@@ -39,7 +40,7 @@ jobs:
       - name: Retrieve short SHA
         id: short_sha
         run: |
-          SHA="${{ github.sha }}"
+          SHA="${{ github.event.pull_request.head.sha || github.sha }}"
           SHORT_SHA="${SHA:0:7}"
           echo "value=$SHORT_SHA" >> $GITHUB_OUTPUT
           echo "Output :"
