@@ -437,7 +437,14 @@ jobs:
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx
-        secrets: web secrets_env key1 value1 key2 value2
+        secrets: |
+          secrets_env:
+            services:
+              - web
+            content: |
+              key1=value1
+              key2=value2
+        trace: true
 
     - name: Deployment - Reusing secrets
       uses: ./
@@ -449,7 +456,14 @@ jobs:
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx
-        secrets: web secrets_env key1 value1 key2 value2
+        secrets: |
+          secrets_env:
+            services:
+              - web
+            content: |
+              key1=value1
+              key2=value2
+        trace: true
 
     - name: Deployment - Change secrets
       uses: ./
@@ -461,7 +475,14 @@ jobs:
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx
-        secrets: web secrets_env key1_b value1_b key2_b value2_b
+        secrets: |
+          secrets_env:
+            services:
+              - web
+            content: |
+              key1_b=value1_b
+              key2_b=value2_b
+        trace: true
 
     - name: Deployment - Change secrets without deleting old ones
       uses: ./
@@ -473,8 +494,15 @@ jobs:
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx
-        secrets: web secrets_env key1_c value1_c key2_c value2_c
+        secrets: |
+          secrets_env:
+            services:
+              - web
+            content: |
+              key1_c=value1_c
+              key2_c=value2_c
         secrets_delete_old: false
+        trace: true
 
     - name: Deployment - Prune secrets
       uses: ./
@@ -486,5 +514,12 @@ jobs:
         ssh_private_key: "${{ needs.generate_key.outputs.private_key }}"
         stack_file_path: ./tests/docker-compose.yml
         stack_name: nginx_2
-        secrets: web secrets_env_2 key1 value1 key2 value2
+        secrets: |
+          secrets_env_2:
+            services:
+              - web
+            content: |
+              key1=value1
+              key2=value2
         secrets_prune: true
+        trace: true
