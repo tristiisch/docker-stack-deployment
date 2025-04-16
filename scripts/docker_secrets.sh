@@ -1,6 +1,9 @@
 #!/bin/sh
 set -eu
 . $WORKDIR/scripts/functions.sh
+if is_trace; then
+	set -x
+fi
 
 get_service_secrets() {
 	service_name=$1

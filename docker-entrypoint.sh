@@ -6,6 +6,10 @@ export WORKDIR
 
 . $WORKDIR/scripts/functions.sh
 
+if is_trace; then
+	set -x
+fi
+
 if [ -z "$INPUT_REMOTE_DOCKER_PORT" ]; then
 	INPUT_REMOTE_DOCKER_PORT=22
 fi
