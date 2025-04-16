@@ -129,6 +129,13 @@ copy_ssh(){
 	scp $verbose_arg -P "$SSH_PORT" "$local_file" "$DOCKER_USER_HOST:$remote_file" 2>&1
 }
 
+is_trace() {
+	if [ -z "${INPUT_TRACE+set}" ] || [ "$INPUT_TRACE" != "true" ]; then
+		return 1
+	fi
+	return 0
+}
+
 is_debug() {
 	if { [ -z "${INPUT_DEBUG+set}" ] || [ "$INPUT_DEBUG" != "true" ]; } && { [ -z "${RUNNER_DEBUG+set}" ] || [ "$RUNNER_DEBUG" != "1" ]; }; then
 		return 1

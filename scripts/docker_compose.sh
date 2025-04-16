@@ -1,6 +1,9 @@
 #!/bin/sh
 set -eu
 . $WORKDIR/scripts/functions.sh
+if is_trace; then
+	set -x
+fi
 
 STACK_FILE=${INPUT_STACK_FILE_PATH}
 DOCKER_OPTIONS=" --log-level debug"
