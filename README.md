@@ -22,7 +22,7 @@ Below is a concise example demonstrating the utilization of this action:
     docker_remove_orphans: true
     stack_name: stack-name
     secrets: compose-service-name secret-prefix VAR_KEY_1 var_value_1 VAR_KEY_2 var_value_2
-	secrets_prune: false
+    secrets_prune: false
     args: ""
 ```
 
@@ -144,7 +144,11 @@ Specify arguments to pass to the deployment command, either `docker` or `docker-
 
 ### `debug`
 
-Toggle verbose messaging for debugging purposes. This feature is automatically set to true when initiating the job in GitHub debug mode.
+Enable verbose logging for debugging purposes. This is automatically enabled when running the job in GitHub debug mode.
+
+### `trace`
+
+Enable detailed logging to capture each executed instruction
 
 ## TODO
 

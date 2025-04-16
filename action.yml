@@ -53,11 +53,11 @@ inputs:
     default: false
   args:
     description: 'Command arguments for deployment'
-  trace:
-    description: 'Log every execution step for detailed tracing (default: false)'
-    default: false
   debug:
     description: 'Include additional debugging information in the logs (default: false)'
+    default: false
+  trace:
+    description: 'Log every execution step for detailed tracing (default: false)'
     default: false
 
 runs:
