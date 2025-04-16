@@ -8,6 +8,7 @@ on:
     types: [opened, synchronize]
     branches:
       - "*"
+  workflow_dispatch:
 
 env:
   SSH_KEY_TYPE: "ed25519"
@@ -16,14 +17,14 @@ env:
   KNOWN_HOST_PATH: "/tmp/ssh/known_host"
   SSH_USERNAME: "deploy"
   IMAGE_BASE_PATH: "./tests/host/Dockerfile"
-  IMAGE_BASE_NAME: "ghcr.io/tristiisch/docker_throw_ssh"
+  IMAGE_BASE_NAME: "ghcr.io/tristiisch/docker_through_ssh"
   IMAGE_TEST_PATH: "./tests/host/with_key/Dockerfile"
   IMAGE_TEST_CONTEXT: "./tests/host/with_key"
-  IMAGE_TEST_NAME: "ghcr.io/tristiisch/docker_throw_ssh_with_key"
-  IMAGE_TEST_TAR: "docker_throw_ssh_with_key.tar"
-  IMAGE_TEST_TAR_PATH: "./docker_throw_ssh_with_key.tar"
-  IMAGE_TEST_ARTIFACT_NAME: "docker-throw-ssh"
-  CONTAINER_NAME: "docker-throw-ssh"
+  IMAGE_TEST_NAME: "ghcr.io/tristiisch/docker_through_ssh_with_key"
+  IMAGE_TEST_TAR: "docker_through_ssh_with_key.tar"
+  IMAGE_TEST_TAR_PATH: "./docker_through_ssh_with_key.tar"
+  IMAGE_TEST_ARTIFACT_NAME: "docker-through-ssh"
+  CONTAINER_NAME: "docker-through-ssh"
   CONTAINER_PORT: "22"
   CONTAINER_HOST_NAME: "localhost"
   CONTAINER_HOST_PORT: "2222"
@@ -39,7 +40,7 @@ jobs:
       - name: Retrieve short SHA
         id: short_sha
         run: |
-          SHA="${{ github.sha }}"
+          SHA="${{ github.event.pull_request.head.sha || github.sha }}"
           SHORT_SHA="${SHA:0:7}"
           echo "value=$SHORT_SHA" >> $GITHUB_OUTPUT
           echo "Output :"
@@ -58,8 +59,7 @@ jobs:
           mkdir -p "$DIR_PATH"
           chmod 700 "$DIR_PATH"
       - name: Generate SSH key pair
-        run: |
-          ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PRIVATE_PATH }}" -N "" -o -a 100
+        run: ssh-keygen -t "${{ env.SSH_KEY_TYPE }}" -f "${{ env.SSH_KEY_PRIVATE_PATH }}" -N "" -o -a 100
       - name: Retrieve public key
         id: ssh_key_public
         run: |
@@ -82,6 +82,9 @@ jobs:
   build_base_service:
     runs-on: ubuntu-latest
     name: "Build base service"
+    needs: ["utils"]
+    permissions:
+      packages: write
     steps:
 
       - uses: actions/checkout@v4
@@ -104,7 +107,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_BASE_NAME }}
           tags: |
-            type=sha,priority=100,prefix=test-,suffix=,format=short
+            type=raw,value=commit-${{ needs.utils.outputs.short_sha }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build initial Docker image for SSHD service in DinD
@@ -143,7 +146,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_TEST_NAME }}
           tags: |
-            type=sha,priority=100,prefix=test-,suffix=,format=short
+            type=raw,value=commit-${{ needs.utils.outputs.short_sha }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build test Docker image for SSHD service in DinD
@@ -155,7 +158,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            BASE_TAG=test-${{ needs.utils.outputs.short_sha }}
+            BASE_TAG=commit-${{ needs.utils.outputs.short_sha }}
             SSH_ACCOUNT=${{ env.SSH_USERNAME }}
             SSH_PUBLIC_KEY=${{ needs.generate_key.outputs.public_key }}
           push: true
@@ -167,8 +170,8 @@ jobs:
     outputs:
       ssh_server_public_key: ${{ steps.get_ssh_public_key.outputs.value }}
     services:
-      docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+      docker-through-ssh:
+        image: "ghcr.io/tristiisch/docker_through_ssh_with_key:commit-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -261,8 +264,8 @@ jobs:
     name: "Basic"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
-      docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+      docker-through-ssh:
+        image: "ghcr.io/tristiisch/docker_through_ssh_with_key:commit-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -296,8 +299,8 @@ jobs:
     name: "Public key"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
-      docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+      docker-through-ssh:
+        image: "ghcr.io/tristiisch/docker_through_ssh_with_key:commit-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -332,8 +335,8 @@ jobs:
     name: "Background deploy"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
-      docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+      docker-through-ssh:
+        image: "ghcr.io/tristiisch/docker_through_ssh_with_key:commit-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -368,8 +371,8 @@ jobs:
     name: "Debug"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
-      docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+      docker-through-ssh:
+        image: "ghcr.io/tristiisch/docker_through_ssh_with_key:commit-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
@@ -404,8 +407,8 @@ jobs:
     name: "Secrets"
     needs: ["utils", "generate_key", "build_run_test_service", "run_test_service"]
     services:
-      docker-throw-ssh:
-        image: "ghcr.io/tristiisch/docker_throw_ssh_with_key:test-${{ needs.utils.outputs.short_sha }}"
+      docker-through-ssh:
+        image: "ghcr.io/tristiisch/docker_through_ssh_with_key:commit-${{ needs.utils.outputs.short_sha }}"
         ports:
           - 2222:22
         options: >
