@@ -488,3 +488,17 @@ jobs:
         stack_name: nginx_2
         secrets: web secrets_env_2 key1 value1 key2 value2
         secrets_prune: true
+
+  cleanup:
+    runs-on: ubuntu-latest
+    name: "Cleanup"
+    needs: ["utils", "test_basic", "test_public_key", "test_background_deploy", "test_debug", "test_secrets"]
+    permissions:
+      packages: write
+    steps:
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          packages: docker_through_ssh,docker_through_ssh_with_key
+          delete-tags: commit-${{ needs.utils.outputs.short_sha }}
+          delete-untagged: true
+          delete-ghost-images: true
